@@ -7,6 +7,8 @@ config.py
 # ==========================================
 # GRABACIONES, CAPTURAS Y FOTOS
 # ==========================================
+configuraciones/
+*.cfg
 camarasIP/
 grabaciones/
 capturas_movimiento/
@@ -17,6 +19,7 @@ capturas_fotogramas/
 *.jpg
 *.jpeg
 *.png
+
 
 # ==========================================
 # LOGS Y ARCHIVOS TEMPORALES
