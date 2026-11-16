@@ -1,40 +1,12 @@
-###########################################################
-###########################################################
-# PRUEBA 1   Comprobacion de puertos 
-###########################################################
-###########################################################
 
-'''
-from dvrip import DVRIPCam
 
-# Prueba con tu contraseña o déjala vacía ("") si no tiene clave
-cam = DVRIPCam("192.168.1.23", user="xxx", password="xxx")
-
-if cam.login():
-    print("Conexión exitosa al puerto 34567.")
-    print("Configuración ONVIF actual:", cam.get_info("NetWork.Onvif"))
-    print("Configuración RTSP actual:", cam.get_info("NetWork.RTSP"))
-    cam.close()
-else:
-    print("No se pudo iniciar sesión. Revisa el usuario y la contraseña.")
-
-import socket
-
-ip = "192.168.1.2"
-for puerto in (554, 8899, 80, 34567):
-    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    s.settimeout(1)
-    abierto = s.connect_ex((ip, puerto)) == 0
-    print(f"Puerto {puerto}: {'ABIERTO' if abierto else 'CERRADO'}")
-    s.close()
-'''
 ###########################################################
 ###########################################################
 # PRUEBA 2  Programa de visualizacion de video
 ###########################################################
 ###########################################################
 
-'''
+
 import subprocess
 import threading
 import cv2
@@ -135,7 +107,7 @@ finally:
     proceso_ffmpeg.terminate()
     cv2.destroyAllWindows()
 
-'''
+
 ###########################################################
 ###########################################################
 # PRUEBA 3 Sacar informacion 
@@ -275,8 +247,8 @@ hilo.join(timeout=3)
 print("\nTotal de paquetes recibidos:", len(paquetes))
 '''
 
-
 '''
+
 for comando in [
     "OPMonitor",
     "NetWork.RTSP",
@@ -291,162 +263,3 @@ for comando in [
         print("Error:", repr(e))
         
 '''
-    
-#########################################################
-#########################################################
-# prueba de codigo
-#########################################################
-#########################################################
-
-
-
-import subprocess
-import threading
-import cv2
-import numpy as np
-from dvrip import DVRIPCam
-import queue
-import time
-
-IP_GARAJE = "192.168.1.2"
-USUARIO = "xxx"
-CLAVE = "xxx"
-
-ANCHO = 640
-ALTO = 360
-
-cam = DVRIPCam(IP_GARAJE, user=USUARIO, password=CLAVE)
-
-if not cam.login():
-    raise SystemExit("No se pudo iniciar sesión en la cámara")
-
-print("Conectado a la cámara .22")
-
-cola_video = queue.Queue()
-
-comando = (
-    "ffmpeg",
-    "-loglevel", "error",
-    "-f", "hevc",
-    "-i", "pipe:0",
-    "-an",
-    "-vf", f"scale={ANCHO}:{ALTO}",
-    "-f", "rawvideo",
-    "-pix_fmt", "bgr24",
-    "pipe:1"
-)
-
-# Guardamos los errores de FFmpeg para poder diagnosticarlos
-log_ffmpeg = open("ffmpeg_error.log", "w")
-
-proceso_ffmpeg = subprocess.Popen(
-    comando,
-    stdin=subprocess.PIPE,
-    stdout=subprocess.PIPE,
-    stderr=log_ffmpeg,
-    bufsize=0
-)
-'''
-def recibir_video(frame, meta, user):
-    if frame is None or not meta:
-        return
-
-    if meta.get("frame") in ("I", "P"):
-        cola_video.put(bytes(frame))
-'''
-def recibir_video(frame, meta, user):
-    if frame is None or not meta:
-        return
-
-    if meta.get("frame") in ("I", "P"):
-        cola_video.put(bytes(frame))
-
-    elif meta.get("type") == "g711a":
-        print(
-            "AUDIO:",
-            meta.get("type"),
-            "| Tamaño:",
-            len(frame)
-        )
-
-def alimentar_ffmpeg():
-    while True:
-        paquete = cola_video.get()
-
-        if paquete is None:
-            break
-
-        try:
-            proceso_ffmpeg.stdin.write(paquete)
-            proceso_ffmpeg.stdin.flush()
-        except (BrokenPipeError, OSError):
-            print("FFmpeg ha dejado de recibir datos")
-            break
-
-
-hilo_ffmpeg = threading.Thread(
-    target=alimentar_ffmpeg,
-    daemon=True
-)
-hilo_ffmpeg.start()
-
-try:
-    hilo_cam = threading.Thread(
-        target=lambda: cam.start_monitor(recibir_video, None),
-        daemon=True
-    )
-    hilo_cam.start()
-
-    bytes_frame = ANCHO * ALTO * 3
-
-    print("Esperando imagen de la cámara...")
-
-
-    buffer = bytearray()
-
-    while True:
-
-        if proceso_ffmpeg.poll() is not None:
-            print("FFmpeg se ha cerrado")
-            break
-
-        datos = proceso_ffmpeg.stdout.read(65536)
-
-        if not datos:
-            print("FFmpeg no entrega más datos")
-            break
-
-        buffer.extend(datos)
-
-        while len(buffer) >= bytes_frame:
-            datos_frame = bytes(buffer[:bytes_frame])
-            del buffer[:bytes_frame]
-
-            imagen = np.frombuffer(
-                datos_frame, dtype=np.uint8
-            ).reshape((ALTO, ANCHO, 3))
-
-            cv2.imshow(
-                "Camara .22 - Prueba individual",
-                imagen
-            )
-
-            if cv2.waitKey(1) & 0xFF == ord("q"):
-                raise KeyboardInterrupt
-
-finally:
-    try:
-        cam.stop_monitor()
-    except Exception:
-        pass
-
-    cola_video.put(None)
-
-    cam.close()
-
-    proceso_ffmpeg.terminate()
-    proceso_ffmpeg.wait()
-
-    log_ffmpeg.close()
-
-    cv2.destroyAllWindows()
