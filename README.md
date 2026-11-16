@@ -114,3 +114,45 @@ pyinstaller --onedir --windowed --name "Videovigilancia" main.py
 ```
 
 El programa compilado quedará listo en `dist/Videovigilancia/`. Si generas un instalador con **Inno Setup**, recuerda asignar permisos de modificación (`Permissions: users-modify`) a la carpeta de destino `{app}` para permitir la escritura de `config.json` y de las grabaciones.
+
+
+---
+
+## 🔧 Parche necesario en la librería `dvrip` (Cámaras de Doble Lente)
+
+Por defecto, la librería `dvrip` solo envía la petición de monitorización para el **canal 0** (`Channel: 0`) al iniciar el flujo de vídeo, lo que impide recibir la segunda lente en cámaras duales.
+
+Para habilitar la recepción simultánea de ambos canales (`canales: (0, 1)`), es necesario realizar una pequeña modificación en el código fuente de la librería instalada en tu entorno Python (`site-packages/dvrip/`):
+
+### 1. Localizar el archivo de la librería
+Puedes encontrar la ruta exacta ejecutando en tu terminal:
+```bash
+python -c "import dvrip, inspect; print(inspect.getfile(dvrip.DVRIP))"
+```
+
+### 2. Modificar la clase `DVRIP` y el método `start_monitor`
+Abre el archivo indicado, busca la clase `DVRIP` y actualiza el método `start_monitor` para que acepte el parámetro `channel` (por defecto `0`) y lo envíe en el paquete JSON de solicitud de vídeo (`OPMonitor`):
+
+```python
+class DVRIP:
+    # ... resto de la clase ...
+
+    def start_monitor(self, channel=0, stream="Main"):
+        """Inicia la transmisión de vídeo permitiendo seleccionar el canal (0 o 1)."""
+        payload = {
+            "Name": "OPMonitor",
+            "SessionID": f"0x{self.session_id:08X}",
+            "OPMonitor": {
+                "Action": "Claim",
+                "Parameter": {
+                    "Channel": channel,
+                    "CombinMode": "NONE",
+                    "StreamType": stream,
+                    "TransMode": "TCP",
+                },
+            },
+        }
+        return self._send_command(1410, payload)
+```
+
+*(Nota: Si empaquetas la aplicación con **PyInstaller**, el ejecutable incluirá automáticamente esta versión modificada de la librería `dvrip`, por lo que no será necesario repetir el parche en los ordenadores donde instales el `.exe`).*
