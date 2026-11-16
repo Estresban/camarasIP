@@ -1,0 +1,692 @@
+{
+  "SystemInfo": {
+    "Name": "SystemInfo",
+    "Ret": 607,
+    "SessionID": "0x0000000a",
+    "SystemInfo": null
+  },
+  "General": {
+    "AppBindFlag": {
+      "BeBinded": true
+    },
+    "AutoMaintain": {
+      "AutoDeleteFilesDays": 0,
+      "AutoRebootDay": "Sunday",
+      "AutoRebootHour": 5
+    },
+    "DSTState": {
+      "InNormalState": true
+    },
+    "General": {
+      "AutoLogout": 0,
+      "FontSize": 24,
+      "IranCalendarEnable": 0,
+      "LocalNo": 0,
+      "MachineName": "LocalHost",
+      "OverWrite": "OverWrite",
+      "ScreenAutoShutdown": 10,
+      "ScreenSaveTime": 0,
+      "VideoOutPut": "Auto"
+    },
+    "Location": {
+      "DSTEnd": {
+        "Day": 26,
+        "Hour": 0,
+        "Minute": 0,
+        "Month": 10,
+        "Week": 0,
+        "Year": 2027
+      },
+      "DSTRule": "On",
+      "DSTStart": {
+        "Day": 30,
+        "Hour": 0,
+        "Minute": 0,
+        "Month": 3,
+        "Week": 0,
+        "Year": 2027
+      },
+      "DateFormat": "YYMMDD",
+      "DateSeparator": "-",
+      "IranCalendar": 0,
+      "Language": "Spanish",
+      "TimeFormat": "24",
+      "VideoFormat": "PAL",
+      "Week": null,
+      "WorkDay": 62
+    },
+    "OneKeyMaskVideo": null,
+    "PwdSafety": {
+      "PwdReset": [
+        {
+          "QuestionAnswer": "",
+          "QuestionIndex": 0
+        },
+        {
+          "QuestionAnswer": "",
+          "QuestionIndex": 0
+        },
+        {
+          "QuestionAnswer": "",
+          "QuestionIndex": 0
+        },
+        {
+          "QuestionAnswer": "",
+          "QuestionIndex": 0
+        }
+      ],
+      "SecurityEmail": "",
+      "SecurityPhone": "",
+      "TipPageHide": false,
+      "VerifyCodeRestorePwdType": 0
+    },
+    "ResumePtzState": {
+      "Enable": false,
+      "PtzState": [
+        {
+          "PresetState": {
+            "Enable": false,
+            "PresetID": 0
+          },
+          "TourState": {
+            "LineID": 0,
+            "Running": false
+          }
+        },
+        {
+          "PresetState": {
+            "Enable": false,
+            "PresetID": 0
+          },
+          "TourState": {
+            "LineID": 0,
+            "Running": false
+          }
+        }
+      ]
+    },
+    "TimingSleep": null
+  },
+  "SystemFunction": {
+    "Name": "SystemFunction",
+    "Ret": 607,
+    "SessionID": "0x0000000a",
+    "SystemFunction": null
+  },
+  "NetWork": {
+    "DAS": {
+      "DeviceID": "123456",
+      "Enable": false,
+      "Password": "",
+      "Port": 9400,
+      "ServerAddr": "10.2.1.58",
+      "UserName": "admin"
+    },
+    "DisableXmServerConn": {
+      "DisableAll": false,
+      "DisableDSS": false,
+      "DisableNAT": false,
+      "DisableRPS": false
+    },
+    "Ecostate": {
+      "EcoState": 0
+    },
+    "LANLinkageBindInfo": null,
+    "Nat": {
+      "Addr": "secu100.net",
+      "DnsServer1": "0xbc007c70",
+      "DnsServer2": "0xec845436",
+      "NatEnable": true,
+      "Port": 8765,
+      "XMeyeMTU": 1280
+    },
+    "NetCapsDomain": {
+      "NetCaps": "caps.secu100.net"
+    },
+    "NetCommon": {
+      "GateWay": "0x0101A8C0",
+      "HostIP": "0x0A01A8C0",
+      "HostName": "LocalHost",
+      "HttpPort": 80,
+      "MAC": "00:12:35:3e:1c:e3",
+      "MaxBps": 0,
+      "MonMode": "TCP",
+      "SSLPort": 8443,
+      "Submask": "0x00FFFFFF",
+      "TCPMaxConn": 10,
+      "TCPPort": 34567,
+      "TransferPlan": "Quality",
+      "UDPPort": 34568,
+      "UseHSDownLoad": false
+    },
+    "NetDHCP": [
+      {
+        "Enable": true,
+        "Interface": "eth0"
+      },
+      {
+        "Enable": false,
+        "Interface": "eth1"
+      },
+      {
+        "Enable": true,
+        "Interface": "eth2"
+      },
+      {
+        "Enable": true,
+        "Interface": "eth3"
+      }
+    ],
+    "NetDNS": {
+      "Address": "0x0187E6D4",
+      "SpareAddress": "0x08080808"
+    },
+    "NetIPFilter": {
+      "Banned": [
+        "0x00000000",
+        "0x00000000",
+        "0x00000000",
+        "0x00000000",
+        "0x00000000",
+        "0x00000000",
+        "0x00000000",
+        "0x00000000",
+        "0x00000000",
+        "0x00000000",
+        "0x00000000",
+        "0x00000000",
+        "0x00000000",
+        "0x00000000",
+        "0x00000000",
+        "0x00000000",
+        "0x00000000",
+        "0x00000000",
+        "0x00000000",
+        "0x00000000",
+        "0x00000000",
+        "0x00000000",
+        "0x00000000",
+        "0x00000000",
+        "0x00000000",
+        "0x00000000",
+        "0x00000000",
+        "0x00000000",
+        "0x00000000",
+        "0x00000000",
+        "0x00000000",
+        "0x00000000",
+        "0x00000000",
+        "0x00000000",
+        "0x00000000",
+        "0x00000000",
+        "0x00000000",
+        "0x00000000",
+        "0x00000000",
+        "0x00000000",
+        "0x00000000",
+        "0x00000000",
+        "0x00000000",
+        "0x00000000",
+        "0x00000000",
+        "0x00000000",
+        "0x00000000",
+        "0x00000000",
+        "0x00000000",
+        "0x00000000",
+        "0x00000000",
+        "0x00000000",
+        "0x00000000",
+        "0x00000000",
+        "0x00000000",
+        "0x00000000",
+        "0x00000000",
+        "0x00000000",
+        "0x00000000",
+        "0x00000000",
+        "0x00000000",
+        "0x00000000",
+        "0x00000000",
+        "0x00000000"
+      ],
+      "Enable": false,
+      "Trusted": [
+        "0x00000000",
+        "0x00000000",
+        "0x00000000",
+        "0x00000000",
+        "0x00000000",
+        "0x00000000",
+        "0x00000000",
+        "0x00000000",
+        "0x00000000",
+        "0x00000000",
+        "0x00000000",
+        "0x00000000",
+        "0x00000000",
+        "0x00000000",
+        "0x00000000",
+        "0x00000000",
+        "0x00000000",
+        "0x00000000",
+        "0x00000000",
+        "0x00000000",
+        "0x00000000",
+        "0x00000000",
+        "0x00000000",
+        "0x00000000",
+        "0x00000000",
+        "0x00000000",
+        "0x00000000",
+        "0x00000000",
+        "0x00000000",
+        "0x00000000",
+        "0x00000000",
+        "0x00000000",
+        "0x00000000",
+        "0x00000000",
+        "0x00000000",
+        "0x00000000",
+        "0x00000000",
+        "0x00000000",
+        "0x00000000",
+        "0x00000000",
+        "0x00000000",
+        "0x00000000",
+        "0x00000000",
+        "0x00000000",
+        "0x00000000",
+        "0x00000000",
+        "0x00000000",
+        "0x00000000",
+        "0x00000000",
+        "0x00000000",
+        "0x00000000",
+        "0x00000000",
+        "0x00000000",
+        "0x00000000",
+        "0x00000000",
+        "0x00000000",
+        "0x00000000",
+        "0x00000000",
+        "0x00000000",
+        "0x00000000",
+        "0x00000000",
+        "0x00000000",
+        "0x00000000",
+        "0x00000000"
+      ]
+    },
+    "NetNTP": {
+      "Enable": true,
+      "NtpServerList": [
+        {
+          "Port": 123,
+          "Server": "time.windows.com"
+        },
+        {
+          "Port": 123,
+          "Server": "0.pool.ntp.org"
+        },
+        {
+          "Port": 123,
+          "Server": "ntp-sz.chl.la"
+        },
+        {
+          "Port": 123,
+          "Server": "ntp.gwadar.cn"
+        }
+      ],
+      "Server": {
+        "Address": "0x00000000",
+        "Anonymity": false,
+        "Name": "time.windows.com",
+        "Password": "",
+        "Port": 123,
+        "UserName": ""
+      },
+      "TimeZone": 14,
+      "UpdatePeriod": 10
+    },
+    "NetPPPoE": {
+      "Enable": false,
+      "HostIP": "0x00000000",
+      "Server": {
+        "Address": "0x00000000",
+        "Anonymity": false,
+        "Name": "PPPoE",
+        "Password": "",
+        "Port": 1900,
+        "UserName": ""
+      }
+    },
+    "NetPubCfgDomain": {
+      "NetPub-Cfg": "pub-cfg.secu100.net",
+      "NetPub-DNS1": "62.82.138.5",
+      "NetPub-Tcs": "https://pub-tcs.secu100.net:5150/set"
+    },
+    "NetWifiDHCP": {
+      "Enable": true
+    },
+    "OnlineUpgrade": {
+      "AutoCheck": true,
+      "AutoUpgradeImp": 1,
+      "BusErrorTryReUpgrade": true,
+      "Enable": true,
+      "IgnoreAllVersion": true,
+      "IgnoreCurVersion": false,
+      "JustImpVersion": false,
+      "ServerAddr": "upgrade.secu100.net",
+      "ServerPort": 8083
+    },
+    "Onvif": {
+      "Enable": true,
+      "Port": 8899
+    },
+    "OpMode": {
+      "OpMode": 0,
+      "OpStatus": 0,
+      "OpValue": 0
+    },
+    "PMS": {
+      "BoxID": "",
+      "Enable": true,
+      "Mode": 0,
+      "Port": 80,
+      "PushInterval": 10,
+      "ServName": "push.umeye.cn"
+    },
+    "PMSContinuousPush": {
+      "IsPush": false,
+      "PicPushInterval": [
+        0
+      ]
+    },
+    "PredefinedDNS": null,
+    "RTSP": {
+      "Enable": true,
+      "Port": 554
+    },
+    "TUTKIOTC": null,
+    "Wifi": {
+      "Auth": "WPA2PSK",
+      "Channel": 0,
+      "Enable": true,
+      "EncrypType": "AES",
+      "GateWay": "0x0101A8C0",
+      "HostIP": "0x1601A8C0",
+      "KeyType": 1,
+      "Keys": "********",
+      "NetType": "Infra",
+      "SSID": "*******",
+      "Submask": "0x00FFFFFF"
+    },
+    "WifiStrengthLevel": {
+      "Excellent": 0,
+      "Good": -40,
+      "Low": -40,
+      "NoSingnal": -70,
+      "VeryGood": 0,
+      "VeryLow": -70
+    }
+  },
+  "NetWork.NetCommon": {
+    "GateWay": "0x0101A8C0",
+    "HostIP": "0x0A01A8C0",
+    "HostName": "LocalHost",
+    "HttpPort": 80,
+    "MAC": "00:12:35:3e:1c:e3",
+    "MaxBps": 0,
+    "MonMode": "TCP",
+    "SSLPort": 8443,
+    "Submask": "0x00FFFFFF",
+    "TCPMaxConn": 10,
+    "TCPPort": 34567,
+    "TransferPlan": "Quality",
+    "UDPPort": 34568,
+    "UseHSDownLoad": false
+  },
+  "NetWork.NetDHCP": [
+    {
+      "Enable": true,
+      "Interface": "eth0"
+    },
+    {
+      "Enable": false,
+      "Interface": "eth1"
+    },
+    {
+      "Enable": true,
+      "Interface": "eth2"
+    },
+    {
+      "Enable": true,
+      "Interface": "eth3"
+    }
+  ],
+  "NetWork.RTSP": {
+    "Enable": true,
+    "Port": 554
+  },
+  "NetWork.Onvif": {
+    "Enable": true,
+    "Port": 8899
+  },
+  "Simplify.Encode": [
+    {
+      "ExtraFormat": {
+        "AudioEnable": true,
+        "Video": {
+          "BitRate": 512,
+          "BitRateControl": "VBR",
+          "Compression": "H.265",
+          "FPS": 12,
+          "GOP": 2,
+          "Quality": 3,
+          "Resolution": "D1",
+          "VirtualGOP": 1
+        },
+        "VideoEnable": true
+      },
+      "MainFormat": {
+        "AudioEnable": true,
+        "Video": {
+          "BitRate": 1024,
+          "BitRateControl": "VBR",
+          "Compression": "H.265",
+          "FPS": 12,
+          "GOP": 4,
+          "Quality": 3,
+          "Resolution": "3M",
+          "VirtualGOP": 1
+        },
+        "VideoEnable": true
+      }
+    },
+    {
+      "ExtraFormat": {
+        "AudioEnable": true,
+        "Video": {
+          "BitRate": 512,
+          "BitRateControl": "VBR",
+          "Compression": "H.265",
+          "FPS": 12,
+          "GOP": 2,
+          "Quality": 3,
+          "Resolution": "D1",
+          "VirtualGOP": 1
+        },
+        "VideoEnable": true
+      },
+      "MainFormat": {
+        "AudioEnable": true,
+        "Video": {
+          "BitRate": 1024,
+          "BitRateControl": "VBR",
+          "Compression": "H.265",
+          "FPS": 12,
+          "GOP": 4,
+          "Quality": 3,
+          "Resolution": "3M",
+          "VirtualGOP": 1
+        },
+        "VideoEnable": true
+      }
+    }
+  ],
+  "Camera": {
+    "ClearFog": [
+      {
+        "enable": false,
+        "level": 50
+      },
+      {
+        "enable": false,
+        "level": 50
+      }
+    ],
+    "DistortionCorrect": {
+      "Lenstype": 0,
+      "Version": 0
+    },
+    "FishLensParam": [
+      {
+        "CenterOffsetX": 500,
+        "CenterOffsetY": 360,
+        "ImageHeight": 720,
+        "ImageWidth": 1280,
+        "LensType": 0,
+        "PCMac": "000000000000",
+        "Radius": 300,
+        "Version": 0,
+        "ViewAngle": 0,
+        "ViewMode": 0,
+        "Zoom": 100
+      }
+    ],
+    "Param": [
+      {
+        "AeSensitivity": 5,
+        "ApertureMode": "0x00000000",
+        "BLCMode": "0x00000000",
+        "DayNightColor": "0x00000003",
+        "Day_nfLevel": 3,
+        "DncThr": 30,
+        "ElecLevel": 50,
+        "EsShutter": "0x00000000",
+        "ExposureParam": {
+          "LeastTime": "0x0000001e",
+          "Level": 0,
+          "MostTime": "0x00010000"
+        },
+        "GainParam": {
+          "AutoGain": 1,
+          "Gain": 50
+        },
+        "IRCUTMode": 0,
+        "InfraredSwap": 0,
+        "IrcutSwap": 0,
+        "Night_nfLevel": 3,
+        "PictureFlip": "0x00000001",
+        "PictureMirror": "0x00000001",
+        "RejectFlicker": "0x00000000",
+        "WhiteBalance": "0x00000000"
+      },
+      {
+        "AeSensitivity": 5,
+        "ApertureMode": "0x00000000",
+        "BLCMode": "0x00000000",
+        "DayNightColor": "0x00000000",
+        "Day_nfLevel": 3,
+        "DncThr": 30,
+        "ElecLevel": 50,
+        "EsShutter": "0x00000002",
+        "ExposureParam": {
+          "LeastTime": "0x0000001e",
+          "Level": 0,
+          "MostTime": "0x00010000"
+        },
+        "GainParam": {
+          "AutoGain": 1,
+          "Gain": 50
+        },
+        "IRCUTMode": 0,
+        "InfraredSwap": 0,
+        "IrcutSwap": 0,
+        "Night_nfLevel": 3,
+        "PictureFlip": "0x00000000",
+        "PictureMirror": "0x00000000",
+        "RejectFlicker": "0x00000000",
+        "WhiteBalance": "0x00000000"
+      }
+    ],
+    "ParamEx": [
+      {
+        "AeMeansure": 0,
+        "AutomaticAdjustment": 3,
+        "BroadTrends": {
+          "AutoGain": 1,
+          "Gain": 50
+        },
+        "CorridorMode": 0,
+        "DayNightSwitch": {
+          "KeepDayPeriod": "0 07:00:00-18:00:00",
+          "SwitchMode": 0
+        },
+        "Dis": 0,
+        "ExposureTime": "0x00000100",
+        "Ldc": 0,
+        "LowLuxMode": 1,
+        "MicroFillLight": 0,
+        "NightEnhance": 0,
+        "OneKeyOpenWL": false,
+        "OpenDNC": true,
+        "PreventOverExpo": 0,
+        "PreventOverExpoByAI": 0,
+        "SoftLedThr": 3,
+        "SoftPhotosensitivecontrol": 0,
+        "Style": "type1"
+      },
+      {
+        "AeMeansure": 0,
+        "AutomaticAdjustment": 3,
+        "BroadTrends": {
+          "AutoGain": 0,
+          "Gain": 50
+        },
+        "CorridorMode": 0,
+        "DayNightSwitch": {
+          "KeepDayPeriod": "0 07:00:00-18:00:00",
+          "SwitchMode": 0
+        },
+        "Dis": 0,
+        "ExposureTime": "0x00000100",
+        "Ldc": 0,
+        "LowLuxMode": 1,
+        "MicroFillLight": 0,
+        "NightEnhance": 0,
+        "OneKeyOpenWL": false,
+        "OpenDNC": false,
+        "PreventOverExpo": 0,
+        "PreventOverExpoByAI": 0,
+        "SoftLedThr": 3,
+        "SoftPhotosensitivecontrol": 0,
+        "Style": "type1"
+      }
+    ],
+    "WhiteLight": {
+      "Brightness": 50,
+      "MoveTrigLight": {
+        "Duration": 60,
+        "Level": 3
+      },
+      "WorkMode": "Close",
+      "WorkPeriod": {
+        "EHour": 23,
+        "EMinute": 59,
+        "Enable": 1,
+        "SHour": 0,
+        "SMinute": 0
+      }
+    }
+  }
+}
