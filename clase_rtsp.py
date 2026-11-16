@@ -12,6 +12,7 @@ from onvif import ONVIFCamera
 import sounddevice as sd
 from notificaciones import enviar_alerta_movimiento
 
+
 from config import (
     ALTO_CELDA,
     ANCHO_CELDA,
