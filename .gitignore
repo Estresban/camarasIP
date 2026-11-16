@@ -1,0 +1,42 @@
+# ==========================================
+# ARCHIVOS DE CONFIGURACIÓN Y CREDENCIALES
+# ==========================================
+config.json
+config.py
+
+# ==========================================
+# GRABACIONES, CAPTURAS Y FOTOS
+# ==========================================
+configuraciones/
+*.cfg
+camarasIP/
+grabaciones/
+capturas_movimiento/
+capturas_fotogramas/
+*.mp4
+*.avi
+*.mkv
+*.jpg
+*.jpeg
+*.png
+
+
+# ==========================================
+# LOGS Y ARCHIVOS TEMPORALES
+# ==========================================
+*.log
+
+# ==========================================
+# ENTORNO PYTHON Y PYINSTALLER
+# ==========================================
+__pycache__/
+*.py[cod]
+*$py.class
+venv/
+.venv/
+env/
+build/
+dist/
+*.spec
+.vscode/
+.idea/
