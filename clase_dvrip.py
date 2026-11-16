@@ -12,6 +12,7 @@ import numpy as np
 import sounddevice as sd
 from notificaciones import enviar_alerta_movimiento
 
+
 from config import (
     ALTO_CELDA,
     ALTO_LENTE_DVRIP,
