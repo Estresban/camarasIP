@@ -115,7 +115,6 @@ pyinstaller --onedir --windowed --name "Videovigilancia" main.py
 
 El programa compilado quedará listo en `dist/Videovigilancia/`. Si generas un instalador con **Inno Setup**, recuerda asignar permisos de modificación (`Permissions: users-modify`) a la carpeta de destino `{app}` para permitir la escritura de `config.json` y de las grabaciones.
 
-
 ---
 
 ## 🔧 Parche necesario en la librería `dvrip` (Cámaras de Doble Lente)
