@@ -11,6 +11,9 @@ from config import (
     SENSIBILIDAD_MOVIMIENTO, COOLDOWN_CAPTURA_SEG,
     INTERVALO_FOTOGRAMA_AUTO_SEG, DISPOSITIVO_SALIDA_AUDIO,
     TELEGRAM_TOKEN, TELEGRAM_CHAT_ID,
+    EMAIL_ACTIVO, EMAIL_REMITENTE, EMAIL_PASSWORD,
+    EMAIL_DESTINATARIO, EMAIL_SMTP_SERVIDOR, EMAIL_SMTP_PUERTO,
+    EMAIL_INTERVALO_ALERTAS, EMAIL_ADJUNTAR_FOTO,
 )
 
 ARCHIVO_CONFIG = os.path.join(RUTA_BASE, "config.json")
@@ -60,9 +63,11 @@ def iniciar():
     tab_camaras = ttk.Frame(notebook, padding=12)
     tab_grabacion = ttk.Frame(notebook, padding=16)
     tab_general = ttk.Frame(notebook, padding=16)
+    tab_correo = ttk.Frame(notebook, padding=16)
     notebook.add(tab_camaras, text="Cámaras")
     notebook.add(tab_grabacion, text="Grabación y detección")
     notebook.add(tab_general, text="General")
+    notebook.add(tab_correo, text="Correo electrónico")
 
     campos_camaras = []
 
@@ -142,6 +147,40 @@ def iniciar():
     ttk.Label(tab_general, text="Los cambios se guardan en config.json y se cargan al iniciar la aplicación.",
               foreground="#b9c5d3", wraplength=560).pack(anchor="w", pady=(14, 4))
 
+    # --- PESTAÑA: CORREO ELECTRÓNICO ---
+    email_guardado = guardados.get("email", {})
+
+    var_email_activo = tk.BooleanVar(value=email_guardado.get("activo", EMAIL_ACTIVO))
+    var_email_adjuntar = tk.BooleanVar(value=email_guardado.get("adjuntar_foto", EMAIL_ADJUNTAR_FOTO))
+
+    fila_checks = ttk.Frame(tab_correo)
+    fila_checks.pack(fill="x", pady=(4, 10))
+    ttk.Checkbutton(fila_checks, text="Activar alertas por correo electrónico",
+                    variable=var_email_activo).pack(side="left", padx=(0, 20))
+    ttk.Checkbutton(fila_checks, text="Adjuntar captura JPEG",
+                    variable=var_email_adjuntar).pack(side="left")
+    
+    entrada_email_rem = campo(tab_correo, "Correo remitente",
+                              email_guardado.get("remitente", EMAIL_REMITENTE), ancho=38)
+    entrada_email_pass = campo(tab_correo, "Contraseña aplicación",
+                               email_guardado.get("password", EMAIL_PASSWORD), ocultar=True, ancho=38)
+    entrada_email_dest = campo(tab_correo, "Correo destinatario",
+                               email_guardado.get("destinatario", EMAIL_DESTINATARIO), ancho=38)
+    entrada_email_smtp = campo(tab_correo, "Servidor SMTP",
+                               email_guardado.get("smtp_servidor", EMAIL_SMTP_SERVIDOR), ancho=38)
+    entrada_email_puerto = campo(tab_correo, "Puerto SMTP (SSL)",
+                                 email_guardado.get("smtp_puerto", EMAIL_SMTP_PUERTO), ancho=38)
+    entrada_email_interv = campo(tab_correo, "Espera entre correos (s)",
+                                 email_guardado.get("intervalo_alertas", EMAIL_INTERVALO_ALERTAS), ancho=38)
+
+    ttk.Label(
+        tab_correo,
+        text="Nota: Si usas Gmail, debes generar una 'Contraseña de aplicación' de 16 letras en tu cuenta de Google.",
+        foreground="#b9c5d3",
+        wraplength=580
+    ).pack(anchor="w", pady=(14, 4))
+
+
     def entero(entrada, nombre):
         try:
             return int(entrada.get().strip())
@@ -172,6 +211,18 @@ def iniciar():
 
             parametros = {k: entero(v, k) for k, v in entradas_grab.items()}
             dispositivo = entero(entrada_audio, "Dispositivo salida audio")
+
+            datos_email = {
+                "activo": bool(var_email_activo.get()),
+                "adjuntar_foto": bool(var_email_adjuntar.get()),
+                "remitente": entrada_email_rem.get().strip(),
+                "password": entrada_email_pass.get().strip(),
+                "destinatario": entrada_email_dest.get().strip(),
+                "smtp_servidor": entrada_email_smtp.get().strip(),
+                "smtp_puerto": entero(entrada_email_puerto, "Puerto SMTP (SSL)"),
+                "intervalo_alertas": entero(entrada_email_interv, "Espera entre correos (s)"),
+            }
+
             datos = {
                 "camaras_rtsp": lista_camaras,
                 "patio": patio,
@@ -180,7 +231,9 @@ def iniciar():
                 "dispositivo_salida_audio": dispositivo,
                 "telegram_token": entrada_token.get().strip(),
                 "telegram_chat_id": entrada_chat.get().strip(),
+                "email": datos_email,
             }
+            
             with open(ARCHIVO_CONFIG, "w", encoding="utf-8") as archivo:
                 json.dump(datos, archivo, ensure_ascii=False, indent=4)
             messagebox.showinfo("Configuración guardada",

@@ -53,9 +53,10 @@ import configuracion as configuracion
 from clase_rtsp import CamaraAvanzada
 from clase_dvrip import CamaraDVRIP
 import notificaciones as notificaciones
+import correo_alertas as correo_alertas
+#from correo_alertas import crear_callback_correo
 
-
-VENTANA = "Sistema de videovigilancia"
+VENTANA = "Sistema de videovigilancia de StiVi-Home"
 ANCHO_PANEL = 360
 CAMARAS = []
 seleccionada = 0
@@ -190,6 +191,9 @@ def controlar_camara(camara, tecla):
     elif tecla in (ord("3"), ord("O"), ord("o")):
         camara.cambiar_luz_led("AUTO")
     
+    elif tecla in (ord("e"), ord("E")):
+        correo_alertas.alternar_alertas_correo()
+        
     elif tecla in (ord("n"), ord("N")):
         notificaciones.alternar_alertas()
 
@@ -258,11 +262,12 @@ BOTONES_PANEL = [
     ("FOTO MANUAL",       195, 354, 345, 398, "foto"),
     ("ESCUCHAR AUDIO",     15, 410, 165, 454, "audio"),
     ("MICRÓFONO",         195, 410, 345, 454, "micro"),
-    ("LUZ BLANCA",         15, 478, 120, 522, "luz_blanca"),
-    ("INFRARROJOS",       130, 478, 245, 522, "luz_ir"),
-    ("LUZ AUTO",          255, 478, 345, 522, "luz_auto"),
-    ("ALERTAS MOVIL",       15, 555, 175, 605, "alertas"),
-    ("CONFIGURACION",      185, 555, 345, 605, "configuracion"),
+    ("LUZ BLANCA",         15, 478, 125, 522, "luz_blanca"),
+    ("INFRARROJOS",       132, 478, 232, 522, "luz_ir"),
+    ("LUZ AUTO",          240, 478, 345, 522, "luz_auto"),
+    ("ALERTAS MOVIL",       15, 555, 125, 605, "alertas"),
+    ("ALERTAS EMAIL",      132, 555, 232, 605, "alertas_email"),
+    ("CONFIGURACION",      240, 555, 345, 605, "configuracion"),
     ("CERRAR",              15, 660, 345, 710, "salir"),
 ]
 
@@ -346,6 +351,14 @@ def dibujar_icono(panel, accion, cx, cy, activo):
             x_out, y_out = int(cx + 9 * math.cos(ang)), int(cy + 9 * math.sin(ang))
             cv2.line(panel, (x_in, y_in), (x_out, y_out), blanco, 2, cv2.LINE_AA)
     
+    
+    elif accion == "alertas_email":
+        # Icono de sobre (correo electrónico)
+        cv2.rectangle(panel, (cx - 10, cy - 6), (cx + 10, cy + 6), blanco, 2, cv2.LINE_AA)
+        cv2.line(panel, (cx - 10, cy - 6), (cx, cy + 1), blanco, 2, cv2.LINE_AA)
+        cv2.line(panel, (cx + 10, cy - 6), (cx, cy + 1), blanco, 2, cv2.LINE_AA)
+
+
     elif accion == "alertas":
         # Campana de notificación
         cv2.ellipse(panel, (cx, cy + 2), (7, 9), 0, 180, 360, blanco, -1, cv2.LINE_AA)
@@ -358,7 +371,7 @@ def dibujar_icono(panel, accion, cx, cy, activo):
         cv2.line(panel, (cx + 7, cy - 7), (cx - 7, cy + 7), blanco, 2, cv2.LINE_AA)
 
     # Tachado visual cuando los interruptores de estado están apagados
-    botones_con_tachado = ("audio", "micro", "deteccion", "grabacion", "captura_auto", "alertas")
+    botones_con_tachado = ("audio", "micro", "deteccion", "grabacion", "captura_auto", "alertas", "alertas_email")
     if accion in botones_con_tachado and not activo:
         cv2.line(panel, (cx - 11, cy - 11), (cx + 11, cy + 11), rojo_tachado, 2, cv2.LINE_AA)
 
@@ -396,14 +409,14 @@ def dibujar_boton_redondeado(img, x1, y1, x2, y2, radio, color_fondo, color_bord
 
 def dibujar_panel(indice_activo, camaras):
     """Crea el panel lateral con botones redondeados, iconos y efecto hover."""
-    panel = np.full((ALTO_TOTAL_BASE, ANCHO_PANEL, 3), 34, dtype=np.uint8)
+    panel = np.full((ALTO_TOTAL_BASE, ANCHO_PANEL, 3), (50, 40, 32), dtype=np.uint8)
 
     cv2.putText(panel, "PANEL DE CONTROL", (22, 35),
                 cv2.FONT_HERSHEY_SIMPLEX, 0.78, (245, 245, 245), 2, cv2.LINE_AA)
     cantidad_camaras = len(camaras)
     cv2.putText(panel, f"Camara seleccionada: {indice_activo + 1}/{cantidad_camaras}",
-                (18, 62), cv2.FONT_HERSHEY_SIMPLEX, 0.43,
-                (180, 220, 255), 1, cv2.LINE_AA)
+                (18, 62), cv2.FONT_HERSHEY_SIMPLEX, 0.63,
+                (0, 255, 255), 1, cv2.LINE_AA)
 
     camara = camaras[indice_activo] if camaras and indice_activo < len(camaras) else None
 
@@ -421,7 +434,8 @@ def dibujar_panel(indice_activo, camaras):
             "luz_auto": modo_luz in ("AUTO", "AUTOMATICO", "AUTOMÁTICO"),
         }
     estados["alertas"] = notificaciones.alertas_activas
-
+    estados["alertas_email"] = correo_alertas.email_alertas_activas
+    
     etiquetas_visuales = {
         "zoom_mas": "ZOOM +",
         "zoom_menos": "ZOOM -",
@@ -434,7 +448,8 @@ def dibujar_panel(indice_activo, camaras):
         "grabacion": "GRABAR",
         "captura_auto": "AUTO FOTO",
         "foto": "FOTO",
-        "alertas": "ALERTAS",
+        "alertas": "TELEGRAM",
+        "alertas_email": "EMAIL",
         "configuracion": "AJUSTES",
 
     }
@@ -447,7 +462,7 @@ def dibujar_panel(indice_activo, camaras):
         encima = (x1 <= mx <= x2) and (y1 <= my <= y2)
 
         # Paleta de colores base
-        color = (58, 72, 88)
+        color = (128, 72, 58)
         if activo:
             color = (40, 150, 55)
         if accion == "salir":
@@ -521,6 +536,13 @@ def ejecutar_accion_panel(accion, camaras):
     if accion == "alertas":
         notificaciones.alternar_alertas()
         return True
+    
+    if accion == "alertas":
+        notificaciones.alternar_alertas()
+        return True
+    if accion == "alertas_email":
+        correo_alertas.alternar_alertas_correo()
+        return True
 
     if accion == "configuracion":
         threading.Thread(target=abrir_configuracion_hilo, daemon=True).start()
@@ -583,43 +605,14 @@ def cerrar_camaras(camaras):
     except Exception:
         pass
 
-''' Implentar cuando este terminado con las 2 clases
-de momento esto es la prueba con dvrip
+# Implentar cuando este terminado con las 2 clases
 
 # ==========================================
 # INICIAR RECEPCIÓN DE ALARMAS Y CORREO
 # ==========================================
 
-from correo_alertas import crear_callback_correo
 
-def iniciar_alertas_correo(camaras):
 
-    for camara in camaras:
-
-        try:
-            # Obtener el objeto DVRIP de la cámara.
-            # Ajustar este atributo al nombre real de tu proyecto.
-            dvr = camara.dvr
-
-            # Registrar callback individual
-            dvr.setAlarm(
-                crear_callback_correo(camara)
-            )
-
-            # Iniciar recepción de eventos
-            dvr.alarmStart()
-
-            print(
-                f"[EMAIL] Recepción de eventos activada: "
-                f"{camara.nombre}"
-            )
-
-        except Exception as exc:
-            print(
-                f"[EMAIL] Error activando alarmas "
-                f"de {camara.nombre}: {exc}"
-            )
-'''
 def main():
     global CAMARAS, seleccionada, salir_panel
 
@@ -631,10 +624,25 @@ def main():
         return
     
     notificaciones.iniciar_bot_comandos(CAMARAS)
+    
+
     seleccionada = 0
     salir_panel = False
     cv2.namedWindow(VENTANA, cv2.WINDOW_NORMAL)
     cv2.resizeWindow(VENTANA, ANCHO_TOTAL_BASE + ANCHO_PANEL, ALTO_TOTAL_BASE)
+
+    # Maximizar ventana al arrancar (Windows / respaldo)
+    if sys.platform.startswith("win"):
+        try:
+            import ctypes
+            hwnd = ctypes.windll.user32.FindWindowW(None, VENTANA)
+            if hwnd:
+                ctypes.windll.user32.ShowWindow(hwnd, 3)  # 3 = SW_MAXIMIZE
+        except Exception:
+            pass
+    else:
+        cv2.setWindowProperty(VENTANA, cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN)
+
     def gestionar_raton(evento, x, y, flags, params):
         global raton_panel
         if x >= ANCHO_TOTAL_BASE:
@@ -645,8 +653,6 @@ def main():
 
     cv2.setMouseCallback(VENTANA, gestionar_raton, CAMARAS)
     # -------------------------------
-
-    print("\n========== CONTROLES ==========")
 
     print("\n========== CONTROLES ==========")
     print("Panel lateral: clic en los botones")

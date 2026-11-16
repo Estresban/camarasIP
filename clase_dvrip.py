@@ -11,7 +11,7 @@ from dvrip import DVRIPCam
 import numpy as np
 import sounddevice as sd
 from notificaciones import enviar_alerta_movimiento
-
+from correo_alertas import enviar_alerta_correo_rtsp
 
 from config import (
     ALTO_CELDA,
@@ -544,8 +544,10 @@ class CamaraDVRIP:
                     self.ultima_captura_mov = now
                     path = f"capturas_movimiento/MOV_{self.nombre}_{datetime.now():%Y%m%d_%H%M%S}.jpg"
                     cv2.imwrite(path, frame)
-                    print(f"¡ALERTA! Movimiento en {self.nombre} -> {path}")
                     enviar_alerta_movimiento(frame, self.nombre)
+                    enviar_alerta_correo_rtsp(self.nombre, frame)
+                    print(f"¡ALERTA! Movimiento en {self.nombre} -> {path}")
+                    
 
         if self.grabando:
             if self.video_writer is None or now - self.inicio_bloque >= MINUTOS_POR_BLOQUE_VIDEO * 60:

@@ -20,18 +20,26 @@ from config import (
     EMAIL_ADJUNTAR_FOTO,
 )
 
+email_alertas_activas = EMAIL_ACTIVO
 
 # Último envío realizado para cada cámara
 _ultimos_envios = {}
 _lock_correo = threading.Lock()
 
-
+def alternar_alertas_correo():
+    """Activa o desactiva el envío de alertas por correo en tiempo real."""
+    global email_alertas_activas
+    email_alertas_activas = not email_alertas_activas
+    estado = "ACTIVADAS" if email_alertas_activas else "DESACTIVADAS"
+    print(f"[EMAIL] Alertas por correo {estado}")
+    
+    
 def enviar_correo_evento(camara, evento, imagen=None):
     """
     Envía un correo con los datos del evento y una fotografía opcional.
     """
 
-    if not EMAIL_ACTIVO:
+    if not email_alertas_activas:
         return False
 
     try:
@@ -155,3 +163,27 @@ def crear_callback_correo(camara):
         )
 
     return callback
+
+def enviar_alerta_correo_rtsp(nombre_camara, imagen):
+    """
+    Envía alerta por correo desde las cámaras RTSP respetando el intervalo configurado.
+    """
+    if not email_alertas_activas:
+        return
+
+    ahora = time.time()
+    with _lock_correo:
+        ultimo = _ultimos_envios.get(nombre_camara, 0)
+        if ahora - ultimo < EMAIL_INTERVALO_ALERTAS:
+            return
+        _ultimos_envios[nombre_camara] = ahora
+
+    # Creamos un objeto ligero con el atributo 'nombre' que espera enviar_correo_evento
+    camara_info = type("CamaraRTSP", (), {"nombre": nombre_camara})()
+    copia_imagen = imagen.copy() if (EMAIL_ADJUNTAR_FOTO and imagen is not None) else None
+
+    threading.Thread(
+        target=enviar_correo_evento,
+        args=(camara_info, "Detección de movimiento (RTSP)", copia_imagen),
+        daemon=True
+    ).start()

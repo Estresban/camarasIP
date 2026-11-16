@@ -65,6 +65,7 @@ MAPEO_BOTONES = {
 }
 
 
+
 def alternar_alertas():
     """Activa o desactiva el envío de notificaciones a Telegram."""
     global alertas_activas

@@ -11,7 +11,7 @@ import numpy as np
 from onvif import ONVIFCamera
 import sounddevice as sd
 from notificaciones import enviar_alerta_movimiento
-
+from correo_alertas import enviar_alerta_correo_rtsp
 
 from config import (
     ALTO_CELDA,
@@ -53,7 +53,8 @@ class CamaraAvanzada:
 
         self.movimiento_detectado = False
         self.modo_luz_actual = "Auto"
-
+        self.lock = threading.Lock()
+        
         # Coordenadas locales de botones dentro de la celda (640x360)
         self.btn_escuchar = (15, 315, 145, 348)
         self.btn_hablar = (155, 315, 285, 348)
@@ -406,6 +407,7 @@ class CamaraAvanzada:
                 ruta_foto = f"capturas_movimiento/MOV_{self.nombre.replace(' ', '_')}_{fecha_str}.jpg"
                 cv2.imwrite(ruta_foto, frame)
                 enviar_alerta_movimiento(frame, self.nombre)
+                enviar_alerta_correo_rtsp(self.nombre, frame)
                 print(f"¡ALERTA! Movimiento en {self.nombre} -> {ruta_foto}")
 
         return hay_movimiento
