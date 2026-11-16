@@ -9,24 +9,40 @@ import cv2
 from config import TELEGRAM_TOKEN, TELEGRAM_CHAT_ID
 
 alertas_activas = True
+camara_telegram_idx = 0  # Índice de la cámara seleccionada desde Telegram (0 = Cámara 1)
 
-# Teclado táctil grande con controles individuales completos
+# Teclado táctil completo con selector de cámara, cruceta PTZ y controles
 TECLADO_TELEGRAM = {
     "keyboard": [
+        [{"text": "📹 Cám 1"}, {"text": "📹 Cám 2"}, {"text": "📹 Cám 3"}, {"text": "📹 Cám 4"}],
+        [{"text": "🔍 Zoom -"}, {"text": "⬆️ Arriba"}, {"text": "🔍 Zoom +"}],
+        [{"text": "⬅️ Izquierda"}, {"text": "📸 Foto Actual"}, {"text": "➡️ Derecha"}],
+        [{"text": "💡 Luz"}, {"text": "⬇️ Abajo"}, {"text": "🎥 Grabar"}],
         [{"text": "📸 Foto 1"}, {"text": "📸 Foto 2"}, {"text": "📸 Foto 3"}, {"text": "📸 Foto 4"}],
         [{"text": "🎥 Grabar 1"}, {"text": "🎥 Grabar 2"}, {"text": "🎥 Grabar 3"}, {"text": "🎥 Grabar 4"}],
         [{"text": "👁️ Detec 1"}, {"text": "👁️ Detec 2"}, {"text": "👁️ Detec 3"}, {"text": "👁️ Detec 4"}],
         [{"text": "💡 Luz 1"}, {"text": "💡 Luz 2"}, {"text": "💡 Luz 3"}, {"text": "💡 Luz 4"}],
-        [{"text": "📷 Todas Fotos"}, {"text": "🎥 Grabar Todas"}],
-        [{"text": "👁️ Detec Todas"}, {"text": "🔔 Alertas ON/OFF"}],
-        [{"text": "📊 Estado"}, {"text": "ℹ️ Ayuda"}],
+        [{"text": "📷 Todas Fotos"}, {"text": "🔔 Alertas ON/OFF"}, {"text": "📊 Estado"}],
     ],
     "resize_keyboard": False,
     "is_persistent": True,
 }
 
-# Equivalencia exacta entre cada botón y su comando
+# Equivalencia exacta entre cada botón y su comando interno
 MAPEO_BOTONES = {
+    "📹 cám 1": "/sel1",
+    "📹 cám 2": "/sel2",
+    "📹 cám 3": "/sel3",
+    "📹 cám 4": "/sel4",
+    "⬆️ arriba": "/ptz_arriba",
+    "⬇️ abajo": "/ptz_abajo",
+    "⬅️ izquierda": "/ptz_izquierda",
+    "➡️ derecha": "/ptz_derecha",
+    "🔍 zoom +": "/zoom_mas",
+    "🔍 zoom -": "/zoom_menos",
+    "📸 foto actual": "/foto_actual",
+    "💡 luz": "/luz_actual",
+    "🎥 grabar": "/grabar_actual",
     "📸 foto 1": "/foto1",
     "📸 foto 2": "/foto2",
     "📸 foto 3": "/foto3",
@@ -44,11 +60,8 @@ MAPEO_BOTONES = {
     "💡 luz 3": "/luz3",
     "💡 luz 4": "/luz4",
     "📷 todas fotos": "/foto",
-    "🎥 grabar todas": "/grabar",
-    "👁️ detec todas": "/deteccion",
     "🔔 alertas on/off": "/alertas",
     "📊 estado": "/estado",
-    "ℹ️ ayuda": "/ayuda",
 }
 
 
@@ -132,32 +145,106 @@ def enviar_alerta_movimiento(imagen_bgr, nombre_camara):
     threading.Thread(target=_enviar_foto_telegram, args=(copia, mensaje), daemon=True).start()
 
 
+def _enviar_captura_camara(camara, prefijo="📷"):
+    """Extrae el fotograma actual de una cámara y lo envía a Telegram."""
+    with camara.lock:
+        frame = camara.frame.copy() if getattr(camara, "frame", None) is not None else None
+    if frame is not None:
+        _enviar_foto_telegram(frame, f"{prefijo} {camara.nombre}")
+    else:
+        enviar_mensaje_telegram(f"⚠️ {camara.nombre} aún no tiene imagen disponible.")
+
+
 def _procesar_comando(texto, camaras):
-    """Procesa botones táctiles y comandos individuales o globales."""
+    """Procesa selección de cámara, movimientos PTZ, zoom y controles."""
+    global camara_telegram_idx
     entrada = texto.strip().lower()
     cmd = MAPEO_BOTONES.get(entrada, entrada)
 
+    if not camaras:
+        enviar_mensaje_telegram("⚠️ No hay cámaras conectadas en el sistema.")
+        return
+
+    # Asegurar que el índice seleccionado sigue siendo válido
+    if camara_telegram_idx >= len(camaras):
+        camara_telegram_idx = 0
+    cam_activa = camaras[camara_telegram_idx]
+
     if cmd in ("/start", "/ayuda", "/help"):
-        lista_cams = "\n".join(f"  {i + 1}. {c.nombre}" for i, c in enumerate(camaras))
+        lista_cams = "\n".join(
+            f"  {'👉' if i == camara_telegram_idx else '▫️'} {i + 1}. {c.nombre}"
+            for i, c in enumerate(camaras)
+        )
         ayuda = (
-            "🛡️ PANEL REMOTO DE CÁMARAS\n\n"
-            f"Cámaras conectadas:\n{lista_cams}\n\n"
-            "Usa los botones inferiores o escribe:\n"
-            "• /foto1..4 — Foto individual\n"
-            "• /grabar1..4 — Grabar individual\n"
-            "• /deteccion1..4 — Movimiento individual\n"
-            "• /luz1..4 — Luz (Auto / Blanca / IR)"
+            "🛡️ CONTROL REMOTO PTZ Y CÁMARAS\n\n"
+            f"Cámara activa: *{cam_activa.nombre}*\n"
+            f"{lista_cams}\n\n"
+            "• Pulsa *Cám 1..4* para elegir qué cámara mover.\n"
+            "• Usa la cruceta (*Arriba, Abajo, Izquierda, Derecha*) para girar la cámara y recibir foto al instante."
         )
         enviar_mensaje_telegram(ayuda)
         return
 
+    # 1. Seleccionar cámara activa (/sel1..4)
+    match_sel = re.match(r"^/sel(\d+)$", cmd)
+    if match_sel:
+        idx = int(match_sel.group(1)) - 1
+        if 0 <= idx < len(camaras):
+            camara_telegram_idx = idx
+            cam_activa = camaras[idx]
+            _enviar_captura_camara(cam_activa, prefijo=f"✅ Seleccionada [{idx + 1}]")
+        else:
+            enviar_mensaje_telegram(f"⚠️ La cámara {idx + 1} no existe (hay {len(camaras)}).")
+        return
+
+    # 2. Movimiento PTZ sobre la cámara seleccionada (ejes ya corregidos)
+    movimientos_ptz = {
+        "/ptz_arriba": (0.0, 0.5, 0.0, "⬆️ Arriba"),
+        "/ptz_abajo": (0.0, -0.5, 0.0, "⬇️ Abajo"),
+        "/ptz_izquierda": (0.5, 0.0, 0.0, "⬅️ Izquierda"),
+        "/ptz_derecha": (-0.5, 0.0, 0.0, "➡️ Derecha"),
+    }
+    if cmd in movimientos_ptz:
+        vx, vy, vz, etiqueta = movimientos_ptz[cmd]
+        if hasattr(cam_activa, "mover_ptz"):
+            cam_activa.mover_ptz(vx, vy, vz)
+        
+        else:
+            enviar_mensaje_telegram(f"⚠️ {cam_activa.nombre} no soporta movimiento PTZ.")
+        return
+
+    # 3. Zoom digital sobre la cámara seleccionada
+    if cmd in ("/zoom_mas", "/zoom_menos"):
+        paso = 0.2 if cmd == "/zoom_mas" else -0.2
+        if hasattr(cam_activa, "cambiar_zoom"):
+            cam_activa.cambiar_zoom(paso)
+            zoom_actual = getattr(cam_activa, "zoom_digital", 1.0)
+            _enviar_captura_camara(cam_activa, prefijo=f"🔍 Zoom {zoom_actual:.1f}x |")
+        else:
+            enviar_mensaje_telegram(f"⚠️ {cam_activa.nombre} no soporta zoom.")
+        return
+
+    # 4. Atajos sobre la cámara seleccionada actualmente
+    if cmd == "/foto_actual":
+        _enviar_captura_camara(cam_activa, prefijo="📸")
+        return
+    if cmd == "/luz_actual":
+        cmd = f"/luz{camara_telegram_idx + 1}"
+    elif cmd == "/grabar_actual":
+        cmd = f"/grabar{camara_telegram_idx + 1}"
+
     if cmd == "/estado":
-        lineas = [f"📊 ESTADO DEL SISTEMA\n• Alertas móvil: {'🟢 ON' if alertas_activas else '⚪ OFF'}"]
+        lineas = [
+            f"📊 ESTADO DEL SISTEMA",
+            f"• Cámara activa PTZ: [{camara_telegram_idx + 1}] {cam_activa.nombre}",
+            f"• Alertas móvil: {'🟢 ON' if alertas_activas else '⚪ OFF'}\n",
+        ]
         for i, c in enumerate(camaras):
             grab = "🔴 REC" if getattr(c, "grabando", False) else "⚪ OFF"
             det = "🟢 ON" if getattr(c, "deteccion_activa", False) else "⚪ OFF"
             luz = getattr(c, "modo_luz_actual", "AUTO")
-            lineas.append(f"{i + 1}. {c.nombre}: Grab {grab} | Det {det} | Luz {luz}")
+            marca = "👉 " if i == camara_telegram_idx else ""
+            lineas.append(f"{marca}{i + 1}. {c.nombre}: Grab {grab} | Det {det} | Luz {luz}")
         enviar_mensaje_telegram("\n".join(lineas))
         return
 
@@ -166,14 +253,13 @@ def _procesar_comando(texto, camaras):
         enviar_mensaje_telegram(f"🔔 Alertas al móvil: {'ACTIVADAS 🟢' if alertas_activas else 'SILENCIADAS ⚪'}.")
         return
 
-    # Extrae la acción y el número opcional de cámara (/foto1, /grabar2, /deteccion3, /luz4)
+    # 5. Comandos individuales o globales (/foto1..4, /grabar1..4, /deteccion1..4, /luz1..4)
     coincidencia = re.match(r"^/(foto|grabar|deteccion|luz)(\d+)?$", cmd)
     if not coincidencia:
         enviar_mensaje_telegram("❓ Comando no reconocido. Pulsa /start para actualizar los botones.")
         return
 
     accion, num_str = coincidencia.groups()
-
     if num_str is not None:
         idx = int(num_str) - 1
         if idx < 0 or idx >= len(camaras):
@@ -185,12 +271,7 @@ def _procesar_comando(texto, camaras):
 
     if accion == "foto":
         for c in objetivos:
-            with c.lock:
-                frame = c.frame.copy() if getattr(c, "frame", None) is not None else None
-            if frame is not None:
-                _enviar_foto_telegram(frame, f"📷 {c.nombre}")
-            else:
-                enviar_mensaje_telegram(f"⚠️ {c.nombre} aún no tiene imagen disponible.")
+            _enviar_captura_camara(c, prefijo="📷")
 
     elif accion == "grabar":
         respuestas = []
@@ -235,14 +316,12 @@ def iniciar_bot_comandos(camaras):
     """Hilo en segundo plano que escucha botones y comandos de Telegram."""
     token = str(TELEGRAM_TOKEN).strip()
     chat_autorizado = str(TELEGRAM_CHAT_ID).strip()
-
     if not token or not chat_autorizado:
         return
 
     def bucle_escucha():
         ultimo_update_id = 0
-        print("[TELEGRAM] Bot con teclado táctil escuchando órdenes...")
-
+        print("[TELEGRAM] Bot PTZ con teclado táctil escuchando órdenes...")
         while True:
             try:
                 ruta = f"/bot{token}/getUpdates?offset={ultimo_update_id + 1}&timeout=20"
@@ -251,17 +330,14 @@ def iniciar_bot_comandos(camaras):
                 resp = conn.getresponse()
                 datos = json.loads(resp.read().decode("utf-8", errors="ignore"))
                 conn.close()
-
                 if datos.get("ok"):
                     for update in datos.get("result", []):
                         ultimo_update_id = update["update_id"]
                         msg = update.get("message", {})
                         remitente_id = str(msg.get("chat", {}).get("id", ""))
                         texto = msg.get("text", "")
-
                         if remitente_id == chat_autorizado and texto:
                             _procesar_comando(texto, camaras)
-
             except Exception:
                 time.sleep(3)
 
