@@ -583,7 +583,43 @@ def cerrar_camaras(camaras):
     except Exception:
         pass
 
+''' Implentar cuando este terminado con las 2 clases
+de momento esto es la prueba con dvrip
 
+# ==========================================
+# INICIAR RECEPCIÓN DE ALARMAS Y CORREO
+# ==========================================
+
+from correo_alertas import crear_callback_correo
+
+def iniciar_alertas_correo(camaras):
+
+    for camara in camaras:
+
+        try:
+            # Obtener el objeto DVRIP de la cámara.
+            # Ajustar este atributo al nombre real de tu proyecto.
+            dvr = camara.dvr
+
+            # Registrar callback individual
+            dvr.setAlarm(
+                crear_callback_correo(camara)
+            )
+
+            # Iniciar recepción de eventos
+            dvr.alarmStart()
+
+            print(
+                f"[EMAIL] Recepción de eventos activada: "
+                f"{camara.nombre}"
+            )
+
+        except Exception as exc:
+            print(
+                f"[EMAIL] Error activando alarmas "
+                f"de {camara.nombre}: {exc}"
+            )
+'''
 def main():
     global CAMARAS, seleccionada, salir_panel
 

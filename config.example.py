@@ -65,6 +65,30 @@ CONFIG_PATIO = {
     "canales": (0, 1),
 }
 
+# ==========================================
+# CONFIGURACIÓN DE CORREO GMAIL
+# ==========================================
+
+EMAIL_ACTIVO = True
+
+EMAIL_REMITENTE = "tu_correo@gmail.com"
+EMAIL_PASSWORD = "CONTRASEÑA_DE_APLICACION_GMAIL"
+EMAIL_DESTINATARIO = "destino@gmail.com"
+
+EMAIL_SMTP_SERVIDOR = "smtp.gmail.com"
+EMAIL_SMTP_PUERTO = 465
+
+# Tiempo mínimo entre correos por cámara
+EMAIL_INTERVALO_ALERTAS = 60
+
+# Adjuntar fotografía de la cámara
+EMAIL_ADJUNTAR_FOTO = True
+
+# ==============================================================================
+# PARÁMETROS DE INTERFAZ, GRABACIÓN Y DETECCIÓN
+# ==============================================================================
+
+
 ANCHO_CELDA = 640
 ALTO_CELDA = 360
 ALTO_LENTE_DVRIP = ALTO_CELDA // 2
@@ -83,6 +107,11 @@ INTERVALO_FOTOGRAMA_AUTO_SEG = 10
 _nombre_grabaciones = "grabaciones"
 _nombre_movimiento = "capturas_movimiento"
 _nombre_fotogramas = "capturas_fotogramas"
+
+# ==============================================================================
+# CARGA DE CONFIGURACIÓN PERSONALIZADA (config.json)
+# ==============================================================================
+
 
 if os.path.exists(RUTA_CONFIG_JSON):
     try:
@@ -109,6 +138,10 @@ if os.path.exists(RUTA_CONFIG_JSON):
     except (OSError, json.JSONDecodeError):
         pass
 
+# ==============================================================================
+# RUTAS FINALES DE ALMACENAMIENTO
+# ==============================================================================
+
 
 def _resolver_carpeta(nombre_o_ruta):
     if os.path.isabs(nombre_o_ruta):
@@ -124,6 +157,10 @@ CARPETA_FOTOGRAMAS = _resolver_carpeta(_nombre_fotogramas)
 CARPETAS_SALIDA = (CARPETA_GRABACIONES, CARPETA_CAPTURAS, CARPETA_FOTOGRAMAS)
 for carpeta in CARPETAS_SALIDA:
     os.makedirs(carpeta, exist_ok=True)
+
+# ==============================================================================
+# FUNCIONES AUXILIARES COMPARTIDAS (CIFRADO Y AUDIO G.711 A-LAW)
+# ==============================================================================
 
 
 def hash_xmeye(password):
