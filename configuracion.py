@@ -4,7 +4,7 @@ import os
 import tkinter as tk
 from tkinter import ttk, messagebox
 
-from camarasIP.config import (
+from config import (
     RUTA_BASE,
     CONFIG_CAMARAS_RTSP, CONFIG_PATIO, MINUTOS_POR_BLOQUE_VIDEO,
     SENSIBILIDAD_MOVIMIENTO, COOLDOWN_CAPTURA_SEG,

@@ -10,9 +10,9 @@ import cv2
 import numpy as np
 from onvif import ONVIFCamera
 import sounddevice as sd
-from camarasIP.notificaciones import enviar_alerta_movimiento
+from notificaciones import enviar_alerta_movimiento
 
-from camarasIP.config import (
+from config import (
     ALTO_CELDA,
     ANCHO_CELDA,
     COOLDOWN_CAPTURA_SEG,

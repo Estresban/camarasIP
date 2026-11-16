@@ -10,9 +10,9 @@ import cv2
 from dvrip import DVRIPCam
 import numpy as np
 import sounddevice as sd
-from camarasIP.notificaciones import enviar_alerta_movimiento
+from notificaciones import enviar_alerta_movimiento
 
-from camarasIP.config import (
+from config import (
     ALTO_CELDA,
     ALTO_LENTE_DVRIP,
     ANCHO_CELDA,

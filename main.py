@@ -29,7 +29,7 @@ import time
 import math
 import numpy as np
 
-from camarasIP.config import (
+from config import (
     RUTA_BASE,
     DIR_DATOS,
     CONFIG_CAMARAS_RTSP,
@@ -49,10 +49,10 @@ os.environ["OPENCV_LOG_LEVEL"] = "ERROR"     # Solo errores críticos en OpenCV
 os.chdir(DIR_DATOS)
 
 import cv2
-import camarasIP.configuracion as configuracion
-from camarasIP.clase_rtsp import CamaraAvanzada
-from camarasIP.clase_dvrip import CamaraDVRIP
-import camarasIP.notificaciones as notificaciones
+import configuracion as configuracion
+from clase_rtsp import CamaraAvanzada
+from clase_dvrip import CamaraDVRIP
+import notificaciones as notificaciones
 
 
 VENTANA = "Sistema de videovigilancia"

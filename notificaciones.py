@@ -6,7 +6,7 @@ import time
 import urllib.parse
 import cv2
 
-from camarasIP.config import TELEGRAM_TOKEN, TELEGRAM_CHAT_ID
+from config import TELEGRAM_TOKEN, TELEGRAM_CHAT_ID
 
 alertas_activas = True
 
