@@ -3,10 +3,11 @@ import json
 import os
 import tkinter as tk
 from tkinter import ttk, messagebox
-
+import subprocess
+import sys
 
 from config import (
-    RUTA_BASE,
+    RUTA_BASE, DIR_DATOS,
     CONFIG_CAMARAS_RTSP, CONFIG_PATIO, MINUTOS_POR_BLOQUE_VIDEO,
     SENSIBILIDAD_MOVIMIENTO, COOLDOWN_CAPTURA_SEG,
     INTERVALO_FOTOGRAMA_AUTO_SEG, DISPOSITIVO_SALIDA_AUDIO,
@@ -17,7 +18,7 @@ from config import (
 )
 
 ARCHIVO_CONFIG = os.path.join(RUTA_BASE, "config.json")
-
+ARCHIVO_HISTORIAL = os.path.join(DIR_DATOS, "historial.txt")
 
 
 def leer_guardados():
@@ -64,6 +65,8 @@ def iniciar():
     tab_grabacion = ttk.Frame(notebook, padding=16)
     tab_general = ttk.Frame(notebook, padding=16)
     tab_correo = ttk.Frame(notebook, padding=16)
+    tab_historial = ttk.Frame(notebook, padding=16)
+    notebook.add(tab_historial, text="Historial")
     notebook.add(tab_camaras, text="Cámaras")
     notebook.add(tab_grabacion, text="Grabación y detección")
     notebook.add(tab_general, text="General")
@@ -179,6 +182,87 @@ def iniciar():
         foreground="#b9c5d3",
         wraplength=580
     ).pack(anchor="w", pady=(14, 4))
+
+    # --- PESTAÑA: HISTORIAL DE DETECCIONES ---
+    barra_top_hist = ttk.Frame(tab_historial)
+    barra_top_hist.pack(fill="x", pady=(0, 8))
+    ttk.Label(barra_top_hist, text="Registro de detecciones (más recientes arriba):",
+              font=("Segoe UI", 10, "bold")).pack(side="left")
+
+    # Empaquetamos primero los botones inferiores para que nunca queden desplazados
+    fila_btns_hist = ttk.Frame(tab_historial)
+    fila_btns_hist.pack(side="bottom", fill="x", pady=(8, 0))
+
+    marco_texto = ttk.Frame(tab_historial)
+    marco_texto.pack(fill="both", expand=True)
+
+    scroll_hist = ttk.Scrollbar(marco_texto, orient="vertical")
+    scroll_hist.pack(side="right", fill="y")
+
+    caja_historial = tk.Text(
+        marco_texto,
+        height=14,
+        wrap="word",
+        bg="#161c23",
+        fg="#f1f4f8",
+        font=("Consolas", 10),
+        relief="flat",
+        padx=10,
+        pady=10,
+        yscrollcommand=scroll_hist.set,
+        state="disabled",
+    )
+    caja_historial.pack(side="left", fill="both", expand=True)
+    scroll_hist.config(command=caja_historial.yview)
+
+    def cargar_historial():
+        caja_historial.config(state="normal")
+        caja_historial.delete("1.0", tk.END)
+        try:
+            if os.path.exists(ARCHIVO_HISTORIAL):
+                with open(ARCHIVO_HISTORIAL, "r", encoding="utf-8") as f:
+                    lineas = [l.strip() for l in f if l.strip()]
+                if lineas:
+                    caja_historial.insert(tk.END, "\n".join(reversed(lineas)))
+                else:
+                    caja_historial.insert(tk.END, "El historial está vacío.")
+            else:
+                caja_historial.insert(tk.END, "Aún no se ha registrado ninguna detección.")
+        except OSError as exc:
+            caja_historial.insert(tk.END, f"Error leyendo historial.txt: {exc}")
+        caja_historial.config(state="disabled")
+
+    def limpiar_historial():
+        if not messagebox.askyesno("Borrar historial", "¿Seguro que quieres vaciar todo el historial de detecciones?", parent=root):
+            return
+        try:
+            with open(ARCHIVO_HISTORIAL, "w", encoding="utf-8") as f:
+                f.write("")
+            cargar_historial()
+        except OSError as exc:
+            messagebox.showerror("Error", str(exc), parent=root)
+
+    def abrir_carpeta_capturas():
+        nombre_carpeta = entradas_carpetas["capturas_movimiento"].get().strip() or "capturas_movimiento"
+        ruta_carpeta = os.path.join(DIR_DATOS, nombre_carpeta)
+        os.makedirs(ruta_carpeta, exist_ok=True)
+        try:
+            if sys.platform.startswith("win"):
+                os.startfile(ruta_carpeta)
+            elif sys.platform == "darwin":
+                subprocess.Popen(["open", ruta_carpeta])
+            else:
+                subprocess.Popen(["xdg-open", ruta_carpeta])
+        except OSError as exc:
+            messagebox.showerror("Error", f"No se pudo abrir la carpeta:\n{exc}", parent=root)
+
+    fila_btns_hist = ttk.Frame(tab_historial)
+    fila_btns_hist.pack(fill="x", pady=(8, 0))
+    ttk.Button(fila_btns_hist, text="Actualizar", command=cargar_historial).pack(side="left")
+    ttk.Button(fila_btns_hist, text="Abrir carpeta de capturas", command=abrir_carpeta_capturas).pack(side="left", padx=(8, 0))
+    ttk.Button(fila_btns_hist, text="Borrar historial", command=limpiar_historial).pack(side="right")
+
+    cargar_historial()
 
 
     def entero(entrada, nombre):

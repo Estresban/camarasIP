@@ -12,6 +12,8 @@ from onvif import ONVIFCamera
 import sounddevice as sd
 from notificaciones import enviar_alerta_movimiento
 from correo_alertas import enviar_alerta_correo_rtsp
+from grabacion_eventos import GrabadorEventos
+
 
 from config import (
     ALTO_CELDA,
@@ -50,7 +52,8 @@ class CamaraAvanzada:
         self.captura_auto_activa = False
         self.escuchando_audio = False
         self.hablando_micro = False
-
+        self.grabador_eventos = GrabadorEventos(self.nombre)
+        
         self.movimiento_detectado = False
         self.modo_luz_actual = "Auto"
         self.lock = threading.Lock()
@@ -69,6 +72,8 @@ class CamaraAvanzada:
         self.fondo_gris = None
         self.ultima_captura_mov = 0
         self.ultimo_fotograma_auto = 0
+        self.forzar_reinicio_stream = False
+
 
         # Zoom digital en lente inferior
         self.zoom_digital = 1.0
@@ -121,6 +126,11 @@ class CamaraAvanzada:
                 print(f"[{self.nombre}] Error PTZ/Zoom: {e}")
 
         threading.Thread(target=_enviar_orden, daemon=True).start()
+
+    def forzar_reconexion(self):
+        """Indica al bucle de vídeo RTSP que cierre y vuelva a abrir el stream."""
+        self.conectada = False
+        self.forzar_reinicio_stream = True
 
     def cambiar_zoom(self, incremento):
         self.zoom_digital = max(1.0, min(4.0, self.zoom_digital + incremento))
@@ -342,6 +352,12 @@ class CamaraAvanzada:
             print(f"[{self.nombre}] Grabación de video: DETENIDA y guardada.")
         elif self.grabando:
             print(f"[{self.nombre}] Grabación de video: INICIADA.")
+            
+    def alternar_grab_movimiento(self):
+        activo = self.grabador_eventos.alternar()
+        if activo and not self.deteccion_activa:
+            self.alternar_deteccion()
+
 
     def alternar_captura_auto(self):
         self.captura_auto_activa = not self.captura_auto_activa
@@ -429,8 +445,10 @@ class CamaraAvanzada:
     def _bucle_video(self):
         cap = cv2.VideoCapture(self.url, cv2.CAP_FFMPEG)
         while not self.detener:
-            if not cap.isOpened():
+            if self.forzar_reinicio_stream:
+                self.forzar_reinicio_stream = False
                 self.conectada = False
+                cap.release()
                 time.sleep(2)
                 cap = cv2.VideoCapture(self.url, cv2.CAP_FFMPEG)
                 continue
@@ -440,6 +458,7 @@ class CamaraAvanzada:
                 frame_redim = cv2.resize(frame, (ANCHO_CELDA, ALTO_CELDA))
                 self.conectada = True
                 self.movimiento_detectado = self._detectar_movimiento(frame_redim)
+                self.grabador_eventos.procesar_frame(frame_redim, self.movimiento_detectado)
                 self._gestionar_grabacion(frame_redim)
                 self._gestionar_captura_auto(frame_redim)
                 self.frame = self._aplicar_zoom_digital(frame_redim)
@@ -473,30 +492,23 @@ class CamaraAvanzada:
 
         estado_mov = "MOV:ON" if self.deteccion_activa else "MOV:OFF"
         color_mov = (0, 255, 0) if self.deteccion_activa else (140, 140, 140)
-        cv2.putText(img, estado_mov, (415, 24), cv2.FONT_HERSHEY_SIMPLEX, 0.48, color_mov, 2)
+        cv2.putText(img, estado_mov, (370, 24), cv2.FONT_HERSHEY_SIMPLEX, 0.46, color_mov, 2)
 
         estado_foto = "FOT:ON" if self.captura_auto_activa else "FOT:OFF"
         color_foto = (0, 255, 255) if self.captura_auto_activa else (140, 140, 140)
-        cv2.putText(img, estado_foto, (495, 24), cv2.FONT_HERSHEY_SIMPLEX, 0.48, color_foto, 2)
+        cv2.putText(img, estado_foto, (445, 24), cv2.FONT_HERSHEY_SIMPLEX, 0.46, color_foto, 2)
+
+        # Indicador PRE: Amarillo en espera, Rojo mientras graba el clip del evento
+        grab_ev = getattr(self, "grabador_eventos", None)
+        if grab_ev and grab_ev.activa:
+            color_pre = (0, 0, 255) if grab_ev.grabando_ahora else (0, 255, 255)
+            cv2.circle(img, (526, 19), 5, color_pre, -1)
+            cv2.putText(img, "PRE", (535, 24), cv2.FONT_HERSHEY_SIMPLEX, 0.46, color_pre, 2)
 
         if self.grabando:
             cv2.circle(img, (582, 19), 6, (0, 0, 255), -1)
             cv2.putText(img, "REC", (592, 24), cv2.FONT_HERSHEY_SIMPLEX, 0.48, (0, 0, 255), 2)
-        '''
-        x1, y1, x2, y2 = self.btn_escuchar
-        color_btn_esc = (200, 130, 0) if self.escuchando_audio else (55, 55, 55)
-        cv2.rectangle(img, (x1, y1), (x2, y2), color_btn_esc, -1)
-        cv2.rectangle(img, (x1, y1), (x2, y2), (255, 255, 255), 1)
-        txt_esc = "OYENDO [V]" if self.escuchando_audio else "ESCUCHAR [V]"
-        cv2.putText(img, txt_esc, (x1 + 8, y1 + 22), cv2.FONT_HERSHEY_SIMPLEX, 0.48, (255, 255, 255), 1)
 
-        x1, y1, x2, y2 = self.btn_hablar
-        color_btn_hab = (0, 0, 220) if self.hablando_micro else (55, 55, 55)
-        cv2.rectangle(img, (x1, y1), (x2, y2), color_btn_hab, -1)
-        cv2.rectangle(img, (x1, y1), (x2, y2), (255, 255, 255), 1)
-        txt_hab = "HABLANDO [T]" if self.hablando_micro else "HABLAR [T]"
-        cv2.putText(img, txt_hab, (x1 + 8, y1 + 22), cv2.FONT_HERSHEY_SIMPLEX, 0.48, (255, 255, 255), 1)
-        '''
         if self.movimiento_detectado:
             cv2.rectangle(img, (3, 3), (ANCHO_CELDA - 3, ALTO_CELDA - 3), (0, 0, 255), 4)
             cv2.putText(img, "MOVIMIENTO DETECTADO", (415, 342), cv2.FONT_HERSHEY_SIMPLEX, 0.52, (0, 0, 255), 2)
@@ -508,6 +520,8 @@ class CamaraAvanzada:
     def cerrar(self):
         self.detener = True
         self.detener_audio()
+        self.grabador_eventos.detener_y_limpiar()
+
         if self.video_writer:
             self.video_writer.release()
             self.video_writer = None

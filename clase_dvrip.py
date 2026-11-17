@@ -12,6 +12,8 @@ import numpy as np
 import sounddevice as sd
 from notificaciones import enviar_alerta_movimiento
 from correo_alertas import enviar_alerta_correo_rtsp
+from grabacion_eventos import GrabadorEventos
+
 
 from config import (
     ALTO_CELDA,
@@ -38,7 +40,8 @@ class CamaraDVRIP:
         self.frame = None
         self.conectada = False
         self.detener = False
-
+        self.grabador_eventos = GrabadorEventos(self.nombre)
+        
         # Estados de funciones (movimiento desactivado por defecto)
         self.grabando = False
         self.deteccion_activa = False
@@ -46,6 +49,7 @@ class CamaraDVRIP:
         self.escuchando_audio = False
         self.hablando_micro = False
         self.movimiento_detectado = False
+        
         self.modo_luz_actual = "Auto"
         self.zoom_digital = 1.0
 
@@ -318,8 +322,20 @@ class CamaraDVRIP:
 
         threading.Thread(target=_enviar_netip, daemon=True).start()
 
+    def forzar_reconexion(self):
+        """Reinicia la conexión DVRIP y los procesos de captura."""
+        self.conectada = False
+        with self.lock_control:
+            for proc in self.procesos.values():
+                try:
+                    proc.terminate()
+                except Exception:
+                    pass
+            self.procesos.clear()
+        time.sleep(1)
+        threading.Thread(target=self._iniciar_dvrip, daemon=True).start()
 
-
+    
     # --- AUDIO BIDIRECCIONAL (ESCUCHAR Y HABLAR) ---
     def alternar_escuchar_audio(self):
         self.escuchando_audio = not self.escuchando_audio
@@ -511,6 +527,12 @@ class CamaraDVRIP:
             self.video_writer.release()
             self.video_writer = None
         print(f"[{self.nombre}] Grabación: {'ON' if self.grabando else 'OFF'}")
+        
+    def alternar_grab_movimiento(self):
+        activo = self.grabador_eventos.alternar()
+        if activo and not self.deteccion_activa:
+            self.alternar_deteccion()
+
 
     def alternar_captura_auto(self):
         self.captura_auto_activa = not self.captura_auto_activa
@@ -548,7 +570,8 @@ class CamaraDVRIP:
                     enviar_alerta_correo_rtsp(self.nombre, frame)
                     print(f"¡ALERTA! Movimiento en {self.nombre} -> {path}")
                     
-
+        self.grabador_eventos.procesar_frame(frame, self.movimiento_detectado)
+        
         if self.grabando:
             if self.video_writer is None or now - self.inicio_bloque >= MINUTOS_POR_BLOQUE_VIDEO * 60:
                 if self.video_writer:
@@ -591,31 +614,24 @@ class CamaraDVRIP:
 
         estado_mov = "MOV:ON" if self.deteccion_activa else "MOV:OFF"
         color_mov = (0, 255, 0) if self.deteccion_activa else (140, 140, 140)
-        cv2.putText(img, estado_mov, (415, 24), cv2.FONT_HERSHEY_SIMPLEX, 0.48, color_mov, 2)
+        cv2.putText(img, estado_mov, (370, 24), cv2.FONT_HERSHEY_SIMPLEX, 0.46, color_mov, 2)
 
         estado_foto = "FOT:ON" if self.captura_auto_activa else "FOT:OFF"
         color_foto = (0, 255, 255) if self.captura_auto_activa else (140, 140, 140)
-        cv2.putText(img, estado_foto, (495, 24), cv2.FONT_HERSHEY_SIMPLEX, 0.48, color_foto, 2)
+        cv2.putText(img, estado_foto, (445, 24), cv2.FONT_HERSHEY_SIMPLEX, 0.46, color_foto, 2)
+
+        # Indicador PRE: Amarillo en espera, Rojo mientras graba el clip del evento
+        grab_ev = getattr(self, "grabador_eventos", None)
+        if grab_ev and grab_ev.activa:
+            color_pre = (0, 0, 255) if grab_ev.grabando_ahora else (0, 255, 255)
+            cv2.circle(img, (526, 19), 5, color_pre, -1)
+            cv2.putText(img, "PRE", (535, 24), cv2.FONT_HERSHEY_SIMPLEX, 0.46, color_pre, 2)
 
         if self.grabando:
             cv2.circle(img, (582, 19), 6, (0, 0, 255), -1)
             cv2.putText(img, "REC", (592, 24), cv2.FONT_HERSHEY_SIMPLEX, 0.48, (0, 0, 255), 2)
-        '''
-        for rect, active, txt_on, txt_off in (
-            (self.btn_escuchar, self.escuchando_audio, "OYENDO [V]", "ESCUCHAR [V]"),
-            (self.btn_hablar, self.hablando_micro, "HABLANDO [T]", "HABLAR [T]"),
-        ):
-            x1, y1, x2, y2 = rect
-            color = (200, 130, 0) if (active and rect == self.btn_escuchar) else (
-                (0, 0, 220) if active else (55, 55, 55)
-            )
-            cv2.rectangle(img, (x1, y1), (x2, y2), color, -1)
-            cv2.rectangle(img, (x1, y1), (x2, y2), (255, 255, 255), 1)
-            cv2.putText(
-                img, txt_on if active else txt_off, (x1 + 8, y1 + 22),
-                cv2.FONT_HERSHEY_SIMPLEX, 0.48, (255, 255, 255), 1,
-            )
-        '''
+
+
 
         if self.movimiento_detectado:
             cv2.rectangle(img, (3, 3), (ANCHO_CELDA - 3, ALTO_CELDA - 3), (0, 0, 255), 4)
@@ -630,6 +646,8 @@ class CamaraDVRIP:
     def cerrar(self):
         self.detener = True
         self.detener_audio()
+        self.grabador_eventos.detener_y_limpiar()
+
         for canal, cam in self.camaras_dvrip.items():
             try:
                 cam.stop_monitor()

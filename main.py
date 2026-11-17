@@ -54,13 +54,15 @@ from clase_rtsp import CamaraAvanzada
 from clase_dvrip import CamaraDVRIP
 import notificaciones as notificaciones
 import correo_alertas as correo_alertas
+from watchdog import WatchdogCamaras
+
 #from correo_alertas import crear_callback_correo
 
 VENTANA = "Sistema de videovigilancia de StiVi-Home"
 ANCHO_PANEL = 360
 CAMARAS = []
 seleccionada = 0
-
+vista_ampliada = False
 
 def preparar_carpetas():
     """Crea las carpetas usadas por las clases antes de guardar archivos."""
@@ -90,9 +92,30 @@ def iniciar_camaras():
 
 
 def dibujar_interfaz(camaras, indice_activo):
-    """Compone la cuadrícula 2x2 con la imagen de cada cámara."""
+    """Compone la cuadrícula 2x2 o la vista ampliada de una cámara a pantalla completa."""
     lienzo = np.zeros((ALTO_TOTAL_BASE, ANCHO_TOTAL_BASE, 3), dtype=np.uint8)
 
+    # --- MODO VISTA AMPLIADA (1 cámara ocupa todo el lienzo 1280x720) ---
+    if vista_ampliada and 0 <= indice_activo < len(camaras):
+        try:
+            imagen = camaras[indice_activo].obtener_imagen_ui(seleccionada=True)
+        except Exception as exc:
+            imagen = np.zeros((ALTO_TOTAL_BASE, ANCHO_TOTAL_BASE, 3), dtype=np.uint8)
+            cv2.putText(
+                imagen, f"Error mostrando cámara: {exc}",
+                (30, 360), cv2.FONT_HERSHEY_SIMPLEX, 0.7,
+                (0, 0, 255), 2, cv2.LINE_AA
+            )
+
+        lienzo = cv2.resize(imagen, (ANCHO_TOTAL_BASE, ALTO_TOTAL_BASE), interpolation=cv2.INTER_LINEAR)
+        cv2.putText(
+            lienzo, "[DOBLE CLIC / ENTER: Volver a 2x2]",
+            (16, ALTO_TOTAL_BASE - 16), cv2.FONT_HERSHEY_SIMPLEX, 0.55,
+            (0, 255, 255), 2, cv2.LINE_AA
+        )
+        return lienzo
+
+    # --- MODO CUADRÍCULA 2x2 NORMAL ---
     for indice in range(4):
         x = (indice % 2) * ANCHO_CELDA
         y = (indice // 2) * ALTO_CELDA
@@ -128,6 +151,7 @@ def dibujar_interfaz(camaras, indice_activo):
         )
 
     return lienzo
+
 
 
 def alternar_metodo(camara, nombre):
@@ -196,6 +220,7 @@ def controlar_camara(camara, tecla):
         
     elif tecla in (ord("n"), ord("N")):
         notificaciones.alternar_alertas()
+        
 
 
 def alternar_zoom(camara, incremento):
@@ -224,11 +249,28 @@ def mover_ptz(camara, tecla):
 
 
 def al_hacer_clic(evento, x, y, flags, parametros):
-    """Selecciona una celda de cámara."""
-    global seleccionada
+    """Selecciona una celda de cámara (1 clic) o alterna vista ampliada (doble clic)."""
+    global seleccionada, vista_ampliada
     camaras = parametros
 
+    if evento == cv2.EVENT_LBUTTONDBLCLK:
+        if vista_ampliada:
+            vista_ampliada = False
+            return
+
+        columna = 0 if x < ANCHO_CELDA else 1
+        fila = 0 if y < ALTO_CELDA else 1
+        indice = fila * 2 + columna
+        if indice < len(camaras):
+            seleccionada = indice
+            vista_ampliada = True
+        return
+
     if evento != cv2.EVENT_LBUTTONDOWN:
+        return
+
+    # En vista ampliada, un clic simple no cambia de cámara
+    if vista_ampliada:
         return
 
     columna = 0 if x < ANCHO_CELDA else 1
@@ -239,9 +281,6 @@ def al_hacer_clic(evento, x, y, flags, parametros):
         return
 
     seleccionada = indice
-    camara = camaras[indice]
-
-
 
 
 # ---------------------------------------------------------------------
@@ -268,6 +307,7 @@ BOTONES_PANEL = [
     ("ALERTAS MOVIL",       15, 555, 125, 605, "alertas"),
     ("ALERTAS EMAIL",      132, 555, 232, 605, "alertas_email"),
     ("CONFIGURACION",      240, 555, 345, 605, "configuracion"),
+    ("GRAB MOVIMIENTO",     15, 614, 345, 650, "grab_mov"),
     ("CERRAR",              15, 660, 345, 710, "salir"),
 ]
 
@@ -364,6 +404,11 @@ def dibujar_icono(panel, accion, cx, cy, activo):
         cv2.ellipse(panel, (cx, cy + 2), (7, 9), 0, 180, 360, blanco, -1, cv2.LINE_AA)
         cv2.line(panel, (cx - 9, cy + 3), (cx + 9, cy + 3), blanco, 2, cv2.LINE_AA)
         cv2.circle(panel, (cx, cy + 6), 2, blanco, -1, cv2.LINE_AA)
+        
+    elif accion == "grab_mov":
+        # Círculo REC + flecha de movimiento
+        cv2.circle(panel, (cx, cy), 7, blanco, -1 if activo else 2, cv2.LINE_AA)
+        cv2.circle(panel, (cx, cy), 10, blanco, 1, cv2.LINE_AA)
 
     elif accion == "salir":
         # Símbolo de cerrar (X)
@@ -371,7 +416,7 @@ def dibujar_icono(panel, accion, cx, cy, activo):
         cv2.line(panel, (cx + 7, cy - 7), (cx - 7, cy + 7), blanco, 2, cv2.LINE_AA)
 
     # Tachado visual cuando los interruptores de estado están apagados
-    botones_con_tachado = ("audio", "micro", "deteccion", "grabacion", "captura_auto", "alertas", "alertas_email")
+    botones_con_tachado = ("audio", "micro", "deteccion", "grabacion", "captura_auto", "alertas", "alertas_email", "grab_mov")
     if accion in botones_con_tachado and not activo:
         cv2.line(panel, (cx - 11, cy - 11), (cx + 11, cy + 11), rojo_tachado, 2, cv2.LINE_AA)
 
@@ -432,6 +477,7 @@ def dibujar_panel(indice_activo, camaras):
             "luz_blanca": modo_luz in ("BLANCA", "WHITE"),
             "luz_ir": modo_luz in ("IR", "INFRARROJA", "INFRARROJOS"),
             "luz_auto": modo_luz in ("AUTO", "AUTOMATICO", "AUTOMÁTICO"),
+            "grab_mov": bool(getattr(getattr(camara, "grabador_eventos", None), "activa", False)),
         }
     estados["alertas"] = notificaciones.alertas_activas
     estados["alertas_email"] = correo_alertas.email_alertas_activas
@@ -451,6 +497,7 @@ def dibujar_panel(indice_activo, camaras):
         "alertas": "TELEGRAM",
         "alertas_email": "EMAIL",
         "configuracion": "AJUSTES",
+        "grab_mov": "GRAB MOV (PRE-BUFFER)",
 
     }
 
@@ -567,6 +614,7 @@ def ejecutar_accion_panel(accion, camaras):
         "luz_blanca": lambda: camara.cambiar_luz_led("BLANCA"),
         "luz_ir": lambda: camara.cambiar_luz_led("IR"),
         "luz_auto": lambda: camara.cambiar_luz_led("AUTO"),
+        "grab_mov": lambda: alternar_metodo(camara, "alternar_grab_movimiento"),
     }
     try:
         funcion = acciones.get(accion)
@@ -575,6 +623,7 @@ def ejecutar_accion_panel(accion, camaras):
     except Exception as exc:
         print(f"[PANEL] Error ejecutando {accion}: {exc}")
     return True
+
 
 
 def al_hacer_clic_panel(evento, x, y, flags, parametros):
@@ -589,6 +638,12 @@ def al_hacer_clic_panel(evento, x, y, flags, parametros):
             if not ejecutar_accion_panel(accion, parametros):
                 salir_panel = True
             break
+
+def alternar_grab_movimiento(self):
+    activo = self.grabador_eventos.alternar()
+    if activo and not self.deteccion_activa:
+        self.alternar_deteccion()
+
 
 def cerrar_camaras(camaras):
     """Detiene todas las cámaras aunque alguna falle al cerrarse."""
@@ -614,7 +669,7 @@ def cerrar_camaras(camaras):
 
 
 def main():
-    global CAMARAS, seleccionada, salir_panel
+    global CAMARAS, seleccionada, salir_panel, vista_ampliada
 
     preparar_carpetas()
     CAMARAS = iniciar_camaras()
@@ -625,8 +680,12 @@ def main():
     
     notificaciones.iniciar_bot_comandos(CAMARAS)
     
+    watchdog = WatchdogCamaras(CAMARAS, timeout_seg=8.0)
+    watchdog.iniciar()
+    
 
     seleccionada = 0
+    
     salir_panel = False
     cv2.namedWindow(VENTANA, cv2.WINDOW_NORMAL)
     cv2.resizeWindow(VENTANA, ANCHO_TOTAL_BASE + ANCHO_PANEL, ALTO_TOTAL_BASE)
@@ -684,8 +743,19 @@ def main():
             if tecla == -1:
                 continue
             tecla_ascii = tecla & 0xFF
+            
+            # Si está en vista ampliada y pulsas ESC (27), vuelve a 2x2; si no, cierra con ESC o Q
+            if tecla_ascii == 27 and vista_ampliada:
+                vista_ampliada = False
+                continue
+            
             if tecla_ascii in (27, ord("q"), ord("Q")):
                 break
+
+            # Alternar vista ampliada con ENTER (13)
+            if tecla_ascii == 13:
+                vista_ampliada = not vista_ampliada
+                continue
 
             if seleccionada >= len(CAMARAS):
                 continue
@@ -699,6 +769,7 @@ def main():
     except KeyboardInterrupt:
         print("\n[MAIN] Interrupción recibida.")
     finally:
+        watchdog.cerrar()
         cerrar_camaras(CAMARAS)
 
 

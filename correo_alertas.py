@@ -187,3 +187,50 @@ def enviar_alerta_correo_rtsp(nombre_camara, imagen):
         args=(camara_info, "Detección de movimiento (RTSP)", copia_imagen),
         daemon=True
     ).start()
+    
+def _enviar_video_correo_hilo(ruta_video, nombre_camara):
+    """Envía el archivo .mp4 adjunto por SMTP en segundo plano."""
+    try:
+        ahora = datetime.now()
+        mensaje = EmailMessage()
+        mensaje["Subject"] = f"VÍDEO ALERTA CCTV - {nombre_camara}"
+        mensaje["From"] = EMAIL_REMITENTE
+        mensaje["To"] = EMAIL_DESTINATARIO
+
+        cuerpo = (
+            "Se ha grabado un clip de vídeo tras detectar movimiento.\n\n"
+            f"Cámara: {nombre_camara}\n"
+            f"Fecha: {ahora.strftime('%d/%m/%Y')}\n"
+            f"Hora: {ahora.strftime('%H:%M:%S')}\n"
+        )
+        mensaje.set_content(cuerpo)
+
+        with open(ruta_video, "rb") as f:
+            datos_mp4 = f.read()
+
+        nombre_archivo = os.path.basename(ruta_video)
+        mensaje.add_attachment(
+            datos_mp4,
+            maintype="video",
+            subtype="mp4",
+            filename=nombre_archivo
+        )
+
+        with smtplib.SMTP_SSL(EMAIL_SMTP_SERVIDOR, EMAIL_SMTP_PUERTO, timeout=30) as servidor:
+            servidor.login(EMAIL_REMITENTE, EMAIL_PASSWORD)
+            servidor.send_message(mensaje)
+
+        print(f"[EMAIL] Clip de vídeo enviado: {ruta_video}")
+    except Exception as exc:
+        print(f"[EMAIL] Error enviando vídeo por correo: {exc}")
+
+
+def enviar_video_correo(ruta_video, nombre_camara):
+    """Lanza el envío del clip .mp4 por correo si las alertas de email están activas."""
+    if not email_alertas_activas:
+        return
+    threading.Thread(
+        target=_enviar_video_correo_hilo,
+        args=(ruta_video, nombre_camara),
+        daemon=True
+    ).start()

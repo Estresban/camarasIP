@@ -5,11 +5,17 @@ import threading
 import time
 import urllib.parse
 import cv2
-
-from config import TELEGRAM_TOKEN, TELEGRAM_CHAT_ID
+import os
+from config import TELEGRAM_TOKEN, TELEGRAM_CHAT_ID, DIR_DATOS
+from collections import deque
+from datetime import datetime
+import correo_alertas
 
 alertas_activas = True
-camara_telegram_idx = 0  # Índice de la cámara seleccionada desde Telegram (0 = Cámara 1)
+camara_telegram_idx = 0
+historial_detecciones = deque(maxlen=20)  # Guarda las últimas 20 detecciones en memoria
+
+ARCHIVO_HISTORIAL = os.path.join(DIR_DATOS, "historial.txt")
 
 # Teclado táctil completo con selector de cámara, cruceta PTZ y controles
 TECLADO_TELEGRAM = {
@@ -21,12 +27,15 @@ TECLADO_TELEGRAM = {
         [{"text": "📸 Foto 1"}, {"text": "📸 Foto 2"}, {"text": "📸 Foto 3"}, {"text": "📸 Foto 4"}],
         [{"text": "🎥 Grabar 1"}, {"text": "🎥 Grabar 2"}, {"text": "🎥 Grabar 3"}, {"text": "🎥 Grabar 4"}],
         [{"text": "👁️ Detec 1"}, {"text": "👁️ Detec 2"}, {"text": "👁️ Detec 3"}, {"text": "👁️ Detec 4"}],
+        [{"text": "🎬 Pre-Buf 1"}, {"text": "🎬 Pre-Buf 2"}, {"text": "🎬 Pre-Buf 3"}, {"text": "🎬 Pre-Buf 4"}],
         [{"text": "💡 Luz 1"}, {"text": "💡 Luz 2"}, {"text": "💡 Luz 3"}, {"text": "💡 Luz 4"}],
-        [{"text": "📷 Todas Fotos"}, {"text": "🔔 Alertas ON/OFF"}, {"text": "📊 Estado"}],
+        [{"text": "📷 Todas Fotos"}, {"text": "🔔 Alertas ON/OFF"}, {"text": "📧 Email ON/OFF"}],
+        [{"text": "📊 Estado"}, {"text": "📋 Historial"}],
     ],
     "resize_keyboard": False,
     "is_persistent": True,
 }
+
 
 # Equivalencia exacta entre cada botón y su comando interno
 MAPEO_BOTONES = {
@@ -61,6 +70,12 @@ MAPEO_BOTONES = {
     "💡 luz 4": "/luz4",
     "📷 todas fotos": "/foto",
     "🔔 alertas on/off": "/alertas",
+    "🎬 pre-buf 1": "/prebuffer1",
+    "🎬 pre-buf 2": "/prebuffer2",
+    "🎬 pre-buf 3": "/prebuffer3",
+    "🎬 pre-buf 4": "/prebuffer4",
+    "📧 email on/off": "/email",
+    "📋 historial": "/historial",
     "📊 estado": "/estado",
 }
 
@@ -135,16 +150,75 @@ def _enviar_foto_telegram(imagen_bgr, texto):
         conn.close()
     except Exception as exc:
         print(f"[ALERTA] Error enviando foto a Telegram: {exc}")
+        
+def _enviar_video_telegram(ruta_video, texto):
+    """Envía un archivo de vídeo .mp4 por HTTPS usando http.client."""
+    token = str(TELEGRAM_TOKEN).strip()
+    chat_id = str(TELEGRAM_CHAT_ID).strip()
+    if not token or not chat_id:
+        return
+
+    try:
+        with open(ruta_video, "rb") as f:
+            datos_mp4 = f.read()
+
+        boundary = "----BoundaryVideoCamara7MA4YWxkTrZu0gW"
+        cuerpo = (
+            f"--{boundary}\r\n"
+            f'Content-Disposition: form-data; name="chat_id"\r\n\r\n'
+            f"{chat_id}\r\n"
+            f"--{boundary}\r\n"
+            f'Content-Disposition: form-data; name="caption"\r\n\r\n'
+            f"{texto}\r\n"
+            f"--{boundary}\r\n"
+            f'Content-Disposition: form-data; name="video"; filename="evento.mp4"\r\n'
+            f"Content-Type: video/mp4\r\n\r\n"
+        ).encode("utf-8") + datos_mp4 + f"\r\n--{boundary}--\r\n".encode("utf-8")
+
+        ruta = f"/bot{token}/sendVideo"
+        cabeceras = {
+            "Content-Type": f"multipart/form-data; boundary={boundary}",
+            "Content-Length": str(len(cuerpo)),
+        }
+
+        conn = http.client.HTTPSConnection("api.telegram.org", timeout=30)
+        conn.request("POST", ruta, body=cuerpo, headers=cabeceras)
+        resp = conn.getresponse()
+        resp.read()
+        conn.close()
+        print(f"[TELEGRAM] Clip de vídeo enviado: {ruta_video}")
+    except Exception as exc:
+        print(f"[ALERTA] Error enviando vídeo a Telegram: {exc}")
+
+
+def enviar_video_evento(ruta_video, nombre_camara):
+    """Lanza el envío del clip .mp4 a Telegram en segundo plano si las alertas están activas."""
+    if not alertas_activas:
+        return
+    mensaje = f"🎥 Clip de evento (con pre-buffer) en: {nombre_camara}"
+    threading.Thread(
+        target=_enviar_video_telegram,
+        args=(ruta_video, mensaje),
+        daemon=True
+    ).start()
+
 
 
 def enviar_alerta_movimiento(imagen_bgr, nombre_camara):
-    """Lanza la alerta en segundo plano solo si las alertas están activadas."""
+    """Guarda la detección en historial.txt y envía foto si las alertas están activas."""
+    hora_str = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
+    linea = f"• {hora_str} — {nombre_camara}\n"
+    try:
+        with open(ARCHIVO_HISTORIAL, "a", encoding="utf-8") as f:
+            f.write(linea)
+    except OSError as exc:
+        print(f"[HISTORIAL] Error escribiendo en historial.txt: {exc}")
+
     if not alertas_activas:
         return
     copia = imagen_bgr.copy()
     mensaje = f"🚨 Movimiento detectado en: {nombre_camara}"
     threading.Thread(target=_enviar_foto_telegram, args=(copia, mensaje), daemon=True).start()
-
 
 def _enviar_captura_camara(camara, prefijo="📷"):
     """Extrae el fotograma actual de una cámara y lo envía a Telegram."""
@@ -253,9 +327,37 @@ def _procesar_comando(texto, camaras):
         alternar_alertas()
         enviar_mensaje_telegram(f"🔔 Alertas al móvil: {'ACTIVADAS 🟢' if alertas_activas else 'SILENCIADAS ⚪'}.")
         return
+    
+    if cmd == "/email":
+        correo_alertas.alternar_alertas_correo()
+        estado_mail = "ACTIVADAS 🟢" if correo_alertas.email_alertas_activas else "SILENCIADAS ⚪"
+        enviar_mensaje_telegram(f"📧 Alertas por correo: {estado_mail}.")
+        return
 
-    # 5. Comandos individuales o globales (/foto1..4, /grabar1..4, /deteccion1..4, /luz1..4)
-    coincidencia = re.match(r"^/(foto|grabar|deteccion|luz)(\d+)?$", cmd)
+    if cmd == "/historial":
+        try:
+            if not os.path.exists(ARCHIVO_HISTORIAL):
+                enviar_mensaje_telegram("📋 Aún no hay detecciones guardadas en historial.txt.")
+                return
+
+            with open(ARCHIVO_HISTORIAL, "r", encoding="utf-8") as f:
+                lineas = [l.strip() for l in f if l.strip()]
+
+            if not lineas:
+                enviar_mensaje_telegram("📋 El archivo historial.txt está vacío.")
+            else:
+                # Cogemos las últimas 5 y las invertimos para mostrar primero la más reciente
+                ultimas_5 = list(reversed(lineas[-5:]))
+                texto_hist = "📋 ÚLTIMAS 5 DETECCIONES:\n\n" + "\n".join(ultimas_5)
+                enviar_mensaje_telegram(texto_hist)
+        except OSError as exc:
+            enviar_mensaje_telegram(f"⚠️ Error leyendo historial: {exc}")
+        return
+
+
+    # 5. Comandos individuales o globales (/foto1..4, /grabar1..4, /deteccion1..4, /prebuffer1..4, /luz1..4)
+    coincidencia = re.match(r"^/(foto|grabar|deteccion|prebuffer|luz)(\d+)?$", cmd)
+
     if not coincidencia:
         enviar_mensaje_telegram("❓ Comando no reconocido. Pulsa /start para actualizar los botones.")
         return
@@ -292,6 +394,18 @@ def _procesar_comando(texto, camaras):
                 respuestas.append(f"👁️ {c.nombre}: Detección {estado}")
         enviar_mensaje_telegram("\n".join(respuestas))
 
+    elif accion == "prebuffer":
+        respuestas = []
+        for c in objetivos:
+            if hasattr(c, "alternar_grab_movimiento"):
+                c.alternar_grab_movimiento()
+                grab_ev = getattr(c, "grabador_eventos", None)
+                activa = bool(getattr(grab_ev, "activa", False))
+                estado = "ACTIVADO 🟢" if activa else "DESACTIVADO ⚪"
+                respuestas.append(f"🎬 {c.nombre}: Pre-buffer {estado}")
+        enviar_mensaje_telegram("\n".join(respuestas))
+
+    
     elif accion == "luz":
         ciclo = {"AUTO": "BLANCA", "BLANCA": "IR", "IR": "AUTO"}
         nombres_bonitos = {
